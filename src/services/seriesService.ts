@@ -73,8 +73,8 @@ function mapEpisode(row: any, seriesId: string): SeriesEpisode {
     duration: row.duration || '',
     description: row.description || '',
     // Note: Add video_url/thumbnail_url to your SQL if you need them later
-    video_url: (row as any).video_url || undefined,
-    thumbnail_url: (row as any).thumbnail_url || undefined,
+    thumbnail_url: row.thumbnail_url || undefined, 
+    video_url: row.video_url || undefined,
     season_id: row.season_id,
     series_id: seriesId,
   };

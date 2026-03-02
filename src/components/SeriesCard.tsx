@@ -11,7 +11,7 @@ interface SeriesCardProps {
   onToggleWatchlist?: () => void;            // Add this line
 }
 
-export default function SeriesCard({ series, onSelect }: SeriesCardProps) {
+export default function SeriesCard({ series, onSelect, onRate, onToggleWatchlist }: SeriesCardProps) {
   const [hovered, setHovered] = useState(false);
 
   return (

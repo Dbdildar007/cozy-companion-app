@@ -6,13 +6,16 @@ import SeriesCard from "./SeriesCard";
 
 interface SeriesRowProps {
   title: string;
-  seriesList: Series[];
-  onSeriesSelect: (series: Series) => void;
-  onRate?: (seriesId: string, rating: number) => void; // Add this
-  onToggleWatchlist?: (seriesId: string) => void;     // Add this
+  seriesList: any[]; // Use your Series type here
+  onSeriesSelect: (series: any) => void;
+  // ADD THESE:
+  onRate?: (id: string, rating: number) => void;
+  getRating?: (id: string) => number;
+  onToggleWatchlist?: (id: string) => void;
+  isInWatchlist?: (id: string) => boolean;
 }
 
-export default function SeriesRow({ title, seriesList, onSeriesSelect, onRate, onToggleWatchlist }: SeriesRowProps) {
+export default function SeriesRow({ title, seriesList, onSeriesSelect, onRate,getRating, onToggleWatchlist, isInWatchlist }: SeriesRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -46,14 +49,18 @@ export default function SeriesRow({ title, seriesList, onSeriesSelect, onRate, o
 
         <div ref={scrollRef} className="flex gap-3 overflow-x-auto scrollbar-hide py-2">
           {seriesList.map((s) => (
-            <SeriesCard 
-  key={s.id} 
-  series={s} 
-  onSelect={onSeriesSelect} 
-  onRate={(rating) => onRate?.(s.id, rating)}
-  onToggleWatchlist={() => onToggleWatchlist?.(s.id)}
-/>
-          ))}
+            {seriesList.map((series) => (
+          <SeriesCard
+            key={series.id}
+            series={series}
+            onClick={() => onSeriesSelect(series)}
+            // PASS THESE DOWN:
+            onRate={onRate}
+            userRating={getRating ? getRating(series.id) : 0}
+            onToggleWatchlist={onToggleWatchlist}
+            isWatchlisted={isInWatchlist ? isInWatchlist(series.id) : false}
+          />
+        ))}
         </div>
 
         <button

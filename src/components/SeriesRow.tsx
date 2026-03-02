@@ -8,9 +8,11 @@ interface SeriesRowProps {
   title: string;
   seriesList: Series[];
   onSeriesSelect: (series: Series) => void;
+  onRate?: (seriesId: string, rating: number) => void; // Add this
+  onToggleWatchlist?: (seriesId: string) => void;     // Add this
 }
 
-export default function SeriesRow({ title, seriesList, onSeriesSelect }: SeriesRowProps) {
+export default function SeriesRow({ title, seriesList, onSeriesSelect, onRate, onToggleWatchlist }: SeriesRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -44,7 +46,13 @@ export default function SeriesRow({ title, seriesList, onSeriesSelect }: SeriesR
 
         <div ref={scrollRef} className="flex gap-3 overflow-x-auto scrollbar-hide py-2">
           {seriesList.map((s) => (
-            <SeriesCard key={s.id} series={s} onSelect={onSeriesSelect} />
+            <SeriesCard 
+  key={s.id} 
+  series={s} 
+  onSelect={onSeriesSelect} 
+  onRate={(rating) => onRate?.(s.id, rating)}
+  onToggleWatchlist={() => onToggleWatchlist?.(s.id)}
+/>
           ))}
         </div>
 

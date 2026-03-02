@@ -139,43 +139,44 @@ export default function MovieModal({
                 </div>
               </div>
 
-     {/* Action buttons - Mobile First & Responsive */}
-<div className="flex flex-col sm:flex-row gap-3 mb-6">
-  {/* Main Play Button - Full width on mobile, flexible on desktop */}
+              {/* Action buttons */}
+{/* --- Replace lines 138 to 160 with this block --- */}
+<div className="flex flex-wrap gap-2 mb-4">
   <button 
     onClick={() => onWatch?.(movie)} 
-    className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground py-3.5 rounded-full font-bold text-sm transition-all active:scale-95"
+    className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-md font-semibold text-sm transition-colors"
   >
-    <Play className="w-5 h-5 fill-current" />
+    <Play className="w-4 h-4 fill-current" />
     {movie.isSeries ? "Play S1 E1" : "Watch Now"}
   </button>
   
-  <div className="flex gap-2 w-full sm:w-auto">
-    {/* My List Button - Rounded Full */}
-    <button 
-      onClick={() => onToggleWatchlist?.(movie.id)} 
-      className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium transition-colors ${
-        isInWatchlist 
-          ? "bg-primary/20 text-primary border border-primary/30" 
-          : "bg-secondary hover:bg-secondary/80 text-foreground"
-      }`}
-    >
-      {isInWatchlist ? <CheckCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-      <span className="sm:hidden lg:inline">My List</span>
-    </button>
+  <button 
+    onClick={() => onToggleWatchlist?.(movie.id)} 
+    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-colors ${
+      isInWatchlist 
+        ? "bg-primary/20 text-primary border border-primary/30" 
+        : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+    }`}
+  >
+    {isInWatchlist ? <CheckCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+    {isInWatchlist ? "Listed" : "My List"}
+  </button>
 
-    {/* Download Button - Rounded Full */}
-    <button 
-      onClick={() => onDownload(movie.id)} 
-      className="flex items-center justify-center bg-secondary hover:bg-secondary/80 text-foreground w-14 h-14 sm:w-12 sm:h-12 rounded-full transition-all active:scale-90"
-    >
-      {downloadState?.status === "complete" ? (
-        <Check className="w-5 h-5 text-primary" />
-      ) : (
-        <Download className="w-5 h-5" />
-      )}
-    </button>
-  </div>
+  <button className="flex items-center gap-2 bg-secondary/80 text-foreground px-5 py-2.5 rounded-full font-medium hover:bg-secondary transition-colors">
+    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+    {movie.userRating || "Rate"}
+  </button>
+
+  <button 
+    onClick={() => onDownload(movie.id)} 
+    className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-3 rounded-md font-semibold text-sm transition-colors"
+  >
+    {downloadState?.status === "complete" ? (
+      <Check className="w-4 h-4 text-primary" />
+    ) : (
+      <Download className="w-4 h-4" />
+    )}
+  </button>
 </div>
 
               {/* Download progress */}

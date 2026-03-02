@@ -48,17 +48,18 @@ function mapSeries(row: any): Series {
   const genres = Array.isArray(genreField) 
     ? genreField 
     : (typeof genreField === 'string' && genreField ? genreField.split(',').map((g: string) => g.trim()) : []);
-
   return {
     id: row.id,
     title: row.title || 'Untitled',
     description: row.description || '',
-    genre: genres,
-    poster_url: row.poster || '', // Mapped from new 'poster' column
-    banner_url: row.heroImage || undefined, // Mapped from new 'heroImage' column
+    genre: row.genre || [],
+    poster_url: row.poster || '',
+    banner_url: row.heroImage || undefined,
     rating: Number(row.rating) || 0,
+    userRating: Number(row.userRating) || 0, // Ensure this is mapped!
     release_year: row.year || new Date().getFullYear(),
-    is_featured: !!row.isEditorChoice, // Using EditorChoice as featured flag
+    is_featured: !!row.isEditorChoice,
+    isSeries: true, // Hardcode this to true here for the UI to know it's a series
   };
 }
 

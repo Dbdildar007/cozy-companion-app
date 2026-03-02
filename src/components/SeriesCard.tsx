@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Star, Tv, Plus, Check } from "lucide-react"; // Added Plus/Check for the button icon
+import { Star, Tv, Plus, CheckCircle } from "lucide-react"; 
+// Remove: import { Button } from "./ui/button";
 import type { Series } from "@/services/seriesService";
-import { Button } from "./ui/button"; // Assuming you have a button component
+
 
 interface SeriesCardProps {
   series: Series;
@@ -79,22 +80,28 @@ export default function SeriesCard({ series, onSelect, onRate, onToggleWatchlist
 
           {/* 2. Add to My List Button */}
           {onToggleWatchlist && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 text-[10px] md:text-xs w-full bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevents opening the series modal
-                onToggleWatchlist();
-              }}
-            >
-              {series.isInWatchlist ? (
-                <><Check className="w-3 h-3 mr-1" /> Added</>
-              ) : (
-                <><Plus className="w-3 h-3 mr-1" /> My List</>
-              )}
-            </Button>
-          )}
+  <button
+    onClick={(e) => {
+      e.stopPropagation(); // Prevents opening the series modal
+      onToggleWatchlist();
+    }}
+    className={`mt-2 flex items-center gap-1 text-[10px] md:text-xs font-medium transition-colors hover:opacity-80 ${
+      series.isInWatchlist ? "text-primary" : "text-foreground"
+    }`}
+  >
+    {series.isInWatchlist ? (
+      <>
+        <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" />
+        <span>Listed</span>
+      </>
+    ) : (
+      <>
+        <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
+        <span>My List</span>
+      </>
+    )}
+  </button>
+)}
         </motion.div>
       </div>
 

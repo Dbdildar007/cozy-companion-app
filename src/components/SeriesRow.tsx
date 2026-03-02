@@ -53,7 +53,7 @@ export default function SeriesRow({ title, seriesList, onSeriesSelect, onRate,ge
           <SeriesCard
             key={series.id}
             series={series}
-            onClick={() => onSeriesSelect(series)}
+            onSelect={() => onSeriesSelect(series)}
             // PASS THESE DOWN:
             onRate={onRate}
             userRating={getRating ? getRating(series.id) : 0}

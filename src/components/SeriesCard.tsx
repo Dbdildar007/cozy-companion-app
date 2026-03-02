@@ -5,7 +5,7 @@ import type { Series } from "@/services/seriesService";
 
 interface SeriesCardProps {
   series: any;
-  onSelect: (series: any) => void; // Fixed prop name to match your usage
+  onSelect: (series: any) => void; 
   onRate?: (id: string, rating: number) => void;
   userRating?: number;
   onToggleWatchlist?: (id: string) => void;

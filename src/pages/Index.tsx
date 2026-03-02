@@ -165,8 +165,10 @@ export default function Index() {
             title="TV Series"
             seriesList={allSeries}
             onSeriesSelect={setSelectedSeries}
-            onRate={(id, val) => setRating(id, val)}                // Add this
-            onToggleWatchlist={toggleWatchlist} // Add this
+            onRate={setRating}              // Sends the function
+            getRating={getRating}           // Sends the current rating
+            onToggleWatchlist={toggleWatchlist} // Sends the function
+            isInWatchlist={isInWatchlist}   // Sends the current status
           />
         )}
 
@@ -178,8 +180,10 @@ export default function Index() {
               title={`${genre} Series`}
               seriesList={list}
               onSeriesSelect={setSelectedSeries}
-              onRate={(id, val) => setRating(id, val)}// Add this
-              onToggleWatchlist={toggleWatchlist} // Add this
+            onRate={setRating}              // Sends the function
+  getRating={getRating}           // Sends the current rating
+  onToggleWatchlist={toggleWatchlist} // Sends the function
+  isInWatchlist={isInWatchlist}   // Sends the current status
             />
           )
         ))}

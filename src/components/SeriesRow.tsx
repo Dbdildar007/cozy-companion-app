@@ -48,7 +48,6 @@ export default function SeriesRow({ title, seriesList, onSeriesSelect, onRate,ge
         </button>
 
         <div ref={scrollRef} className="flex gap-3 overflow-x-auto scrollbar-hide py-2">
-          {seriesList.map((s) => (
             {seriesList.map((series) => (
           <SeriesCard
             key={series.id}

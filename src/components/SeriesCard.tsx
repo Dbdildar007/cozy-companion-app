@@ -3,9 +3,12 @@ import { motion } from "framer-motion";
 import { Star, Tv } from "lucide-react";
 import type { Series } from "@/services/seriesService";
 
+
 interface SeriesCardProps {
   series: Series;
   onSelect: (series: Series) => void;
+  onRate?: (rating: number) => void;         // Add this line
+  onToggleWatchlist?: () => void;            // Add this line
 }
 
 export default function SeriesCard({ series, onSelect }: SeriesCardProps) {

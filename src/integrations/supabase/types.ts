@@ -14,179 +14,311 @@ export type Database = {
   }
   public: {
     Tables: {
-      episodes: {
+      friendships: {
         Row: {
+          addressee_id: string
           created_at: string
-          description: string | null
-          duration: string | null
-          episode_number: number
           id: string
-          season_id: string
-          series_id: string
-          thumbnail_url: string | null
-          title: string
-          video_url: string | null
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          duration?: string | null
-          episode_number: number
-          id?: string
-          season_id: string
-          series_id: string
-          thumbnail_url?: string | null
-          title: string
-          video_url?: string | null
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          duration?: string | null
-          episode_number?: number
-          id?: string
-          season_id?: string
-          series_id?: string
-          thumbnail_url?: string | null
-          title?: string
-          video_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "episodes_season_id_fkey"
-            columns: ["season_id"]
-            isOneToOne: false
-            referencedRelation: "seasons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "episodes_series_id_fkey"
-            columns: ["series_id"]
-            isOneToOne: false
-            referencedRelation: "series"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      movies: {
-        Row: {
-          banner_url: string | null
-          created_at: string
-          description: string | null
-          duration: string | null
-          genre: string | null
-          id: string
-          is_featured: boolean | null
-          poster_url: string | null
-          rating: number | null
-          release_year: number | null
-          title: string
+          requester_id: string
+          status: string
           updated_at: string
-          video_url: string | null
         }
         Insert: {
-          banner_url?: string | null
+          addressee_id: string
           created_at?: string
-          description?: string | null
-          duration?: string | null
-          genre?: string | null
           id?: string
-          is_featured?: boolean | null
-          poster_url?: string | null
-          rating?: number | null
-          release_year?: number | null
-          title: string
+          requester_id: string
+          status?: string
           updated_at?: string
-          video_url?: string | null
         }
         Update: {
-          banner_url?: string | null
+          addressee_id?: string
           created_at?: string
-          description?: string | null
-          duration?: string | null
-          genre?: string | null
           id?: string
-          is_featured?: boolean | null
-          poster_url?: string | null
-          rating?: number | null
-          release_year?: number | null
-          title?: string
+          requester_id?: string
+          status?: string
           updated_at?: string
-          video_url?: string | null
         }
         Relationships: []
       }
-      seasons: {
+      movie_ratings: {
         Row: {
           created_at: string
           id: string
-          season_number: number
-          series_id: string
-          title: string | null
+          movie_id: string
+          rating: number
+          updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          season_number: number
-          series_id: string
-          title?: string | null
+          movie_id: string
+          rating: number
+          updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          season_number?: number
-          series_id?: string
-          title?: string | null
+          movie_id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      movies: {
+        Row: {
+          category: string[]
+          created_at: string
+          description: string
+          duration: string
+          genre: string[]
+          hero_image: string | null
+          id: string
+          is_editor_choice: boolean
+          is_featured: boolean
+          is_series: boolean
+          is_trending: boolean
+          language: string
+          newly_added: string | null
+          poster: string
+          rating: number
+          title: string
+          url: string | null
+          year: number
+        }
+        Insert: {
+          category?: string[]
+          created_at?: string
+          description?: string
+          duration?: string
+          genre?: string[]
+          hero_image?: string | null
+          id: string
+          is_editor_choice?: boolean
+          is_featured?: boolean
+          is_series?: boolean
+          is_trending?: boolean
+          language?: string
+          newly_added?: string | null
+          poster?: string
+          rating?: number
+          title: string
+          url?: string | null
+          year: number
+        }
+        Update: {
+          category?: string[]
+          created_at?: string
+          description?: string
+          duration?: string
+          genre?: string[]
+          hero_image?: string | null
+          id?: string
+          is_editor_choice?: boolean
+          is_featured?: boolean
+          is_series?: boolean
+          is_trending?: boolean
+          language?: string
+          newly_added?: string | null
+          poster?: string
+          rating?: number
+          title?: string
+          url?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string
+          id: string
+          is_online: boolean
+          last_seen: string | null
+          unique_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_online?: boolean
+          last_seen?: string | null
+          unique_id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_online?: boolean
+          last_seen?: string | null
+          unique_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      watch_parties: {
+        Row: {
+          created_at: string
+          current_time_sec: number
+          friend_id: string
+          host_id: string
+          id: string
+          is_playing: boolean
+          movie_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_time_sec?: number
+          friend_id: string
+          host_id: string
+          id?: string
+          is_playing?: boolean
+          movie_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_time_sec?: number
+          friend_id?: string
+          host_id?: string
+          id?: string
+          is_playing?: boolean
+          movie_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      watch_party_history: {
+        Row: {
+          duration_watched_sec: number
+          ended_at: string | null
+          friend_id: string
+          host_id: string
+          id: string
+          movie_id: string
+          started_at: string
+        }
+        Insert: {
+          duration_watched_sec?: number
+          ended_at?: string | null
+          friend_id: string
+          host_id: string
+          id?: string
+          movie_id: string
+          started_at?: string
+        }
+        Update: {
+          duration_watched_sec?: number
+          ended_at?: string | null
+          friend_id?: string
+          host_id?: string
+          id?: string
+          movie_id?: string
+          started_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "seasons_series_id_fkey"
-            columns: ["series_id"]
+            foreignKeyName: "watch_party_history_movie_id_fkey"
+            columns: ["movie_id"]
             isOneToOne: false
-            referencedRelation: "series"
+            referencedRelation: "movies"
             referencedColumns: ["id"]
           },
         ]
       }
-      series: {
+      watch_progress: {
         Row: {
-          banner_url: string | null
-          created_at: string
-          description: string | null
-          genre: string | null
+          current_time_sec: number
+          duration_sec: number
           id: string
-          is_featured: boolean | null
-          poster_url: string | null
-          rating: number | null
-          release_year: number | null
-          title: string
-          updated_at: string
+          last_watched: string
+          movie_id: string
+          user_id: string
         }
         Insert: {
-          banner_url?: string | null
-          created_at?: string
-          description?: string | null
-          genre?: string | null
+          current_time_sec?: number
+          duration_sec?: number
           id?: string
-          is_featured?: boolean | null
-          poster_url?: string | null
-          rating?: number | null
-          release_year?: number | null
-          title: string
-          updated_at?: string
+          last_watched?: string
+          movie_id: string
+          user_id: string
         }
         Update: {
-          banner_url?: string | null
-          created_at?: string
-          description?: string | null
-          genre?: string | null
+          current_time_sec?: number
+          duration_sec?: number
           id?: string
-          is_featured?: boolean | null
-          poster_url?: string | null
-          rating?: number | null
-          release_year?: number | null
-          title?: string
-          updated_at?: string
+          last_watched?: string
+          movie_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      watchlist: {
+        Row: {
+          created_at: string
+          id: string
+          movie_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movie_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movie_id?: string
+          user_id?: string
         }
         Relationships: []
       }

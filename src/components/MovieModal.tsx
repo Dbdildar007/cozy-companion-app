@@ -150,15 +150,20 @@ export default function MovieModal({
                 </button>
                 <button
                   onClick={() => onToggleWatchlist?.(movie.id)}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-md font-semibold text-sm transition-colors ${
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-colors ${
                     isInWatchlist
                       ? "bg-primary/20 text-primary border border-primary/30"
                       : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
                   }`}
                 >
-                  {isInWatchlist ? <CheckCircle className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {isInWatchlist ? <CheckCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                   {isInWatchlist ? "Listed" : "My List"}
                 </button>
+                <button className="flex items-center gap-2 bg-secondary/80 text-foreground px-5 py-2.5 rounded-full font-medium hover:bg-secondary transition-colors">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                {movie.userRating || "Rate"}
+                </button>
+                
                 <button
                   onClick={() => onDownload(movie.id)}
                   className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-3 rounded-md font-semibold text-sm transition-colors"

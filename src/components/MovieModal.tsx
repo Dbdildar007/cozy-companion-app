@@ -159,11 +159,10 @@ export default function MovieModal({
                   {isInWatchlist ? <CheckCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                   {isInWatchlist ? "Listed" : "My List"}
                 </button>
-           <button className="flex items-center gap-2 bg-secondary/80 text-foreground px-5 py-2.5 rounded-full font-medium hover:bg-secondary transition-colors">
-    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-    {/* Use movie.userRating here, NOT series.userRating */}
-    {movie.userRating || "Rate"}
-  </button>
+                <button className="flex items-center gap-2 bg-secondary/80 text-foreground px-5 py-2.5 rounded-full font-medium hover:bg-secondary transition-colors">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                {movie.userRating || "Rate"}
+                </button>
                 
                 <button
                   onClick={() => onDownload(movie.id)}

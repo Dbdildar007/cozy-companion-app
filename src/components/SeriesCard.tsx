@@ -79,27 +79,23 @@ export default function SeriesCard({ series, onSelect, onRate, onToggleWatchlist
           )}
 
           {/* 2. Add to My List Button */}
-          {onToggleWatchlist && (
+         
+{onToggleWatchlist && (
   <button
     onClick={(e) => {
-      e.stopPropagation(); // Prevents opening the series modal
+      e.stopPropagation();
       onToggleWatchlist();
     }}
-    className={`mt-2 flex items-center gap-1 text-[10px] md:text-xs font-medium transition-colors hover:opacity-80 ${
+    className={`mt-2 flex items-center gap-1 text-xs font-medium transition-colors ${
       series.isInWatchlist ? "text-primary" : "text-foreground"
     }`}
   >
     {series.isInWatchlist ? (
-      <>
-        <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" />
-        <span>Listed</span>
-      </>
+      <CheckCircle className="w-3 h-3" />
     ) : (
-      <>
-        <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
-        <span>My List</span>
-      </>
+      <Plus className="w-3 h-3" />
     )}
+    {series.isInWatchlist ? "Listed" : "My List"}
   </button>
 )}
         </motion.div>

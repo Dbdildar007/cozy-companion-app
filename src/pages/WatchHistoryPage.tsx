@@ -1,13 +1,25 @@
-import { motion } from "framer-motion";
-import { ChevronLeft, Clock, Play, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, Clock, Play, Trash2, Tv } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { useMovies } from "@/hooks/useMovies";
+import { useAllSeries } from "@/hooks/useSeries";
+import SeriesModal from "@/components/SeriesModal";
+import SeriesVideoPlayer from "@/components/SeriesVideoPlayer";
+import VideoPlayer from "@/components/VideoPlayer";
+import type { Movie } from "@/data/movies";
+import type { Series, SeriesEpisode } from "@/services/seriesService";
 
 export default function WatchHistoryPage() {
   const navigate = useNavigate();
-  const { getContinueWatching, clearProgress } = useWatchProgress();
+  const { getContinueWatching, clearProgress, updateProgress, getProgress } = useWatchProgress();
   const { allMovies } = useMovies();
+  const { allSeries } = useAllSeries();
+
+  const [playingMovie, setPlayingMovie] = useState<Movie | null>(null);
+  const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
+  const [playingSeries, setPlayingSeries] = useState<{ series: Series; episode: SeriesEpisode; season: number } | null>(null);
 
   const progressList = getContinueWatching();
   const items = progressList
@@ -17,6 +29,22 @@ export default function WatchHistoryPage() {
       return { movie, progress: p };
     })
     .filter(Boolean) as { movie: typeof allMovies[0]; progress: typeof progressList[0] }[];
+
+  const handleResume = (movie: Movie) => {
+    if (movie.isSeries) {
+      const s = allSeries.find(s => s.id === movie.id);
+      if (s) {
+        setSelectedSeries(s);
+      }
+    } else {
+      setPlayingMovie(movie);
+    }
+  };
+
+  const handlePlaySeriesEpisode = (series: Series, episode: SeriesEpisode, season: number) => {
+    setSelectedSeries(null);
+    setPlayingSeries({ series, episode, season });
+  };
 
   return (
     <motion.div
@@ -53,10 +81,21 @@ export default function WatchHistoryPage() {
                 className="flex gap-3 p-3 rounded-lg bg-secondary"
               >
                 <div className="relative w-20 h-28 rounded overflow-hidden flex-shrink-0">
-                  <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+                  {movie.poster ? (
+                    <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <Tv className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  )}
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted">
                     <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
                   </div>
+                  {movie.isSeries && (
+                    <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-primary/90 px-1 py-0.5 rounded text-[8px] font-semibold text-primary-foreground">
+                      <Tv className="w-2 h-2" /> Series
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
                   <div>
@@ -68,7 +107,7 @@ export default function WatchHistoryPage() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => navigate("/")}
+                      onClick={() => handleResume(movie)}
                       className="flex items-center gap-1 text-primary text-xs font-medium"
                     >
                       <Play className="w-3 h-3 fill-current" /> Resume
@@ -86,6 +125,36 @@ export default function WatchHistoryPage() {
           })}
         </div>
       )}
+
+      <SeriesModal
+        series={selectedSeries}
+        onClose={() => setSelectedSeries(null)}
+        onPlayEpisode={handlePlaySeriesEpisode}
+      />
+
+      <AnimatePresence>
+        {playingMovie && (
+          <VideoPlayer
+            movie={playingMovie}
+            onClose={() => setPlayingMovie(null)}
+            onProgressUpdate={updateProgress}
+            initialTime={getProgress(playingMovie.id)?.currentTime || 0}
+            allMovies={allMovies}
+            onPlayMovie={(m) => { setPlayingMovie(null); setTimeout(() => setPlayingMovie(m), 100); }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {playingSeries && (
+          <SeriesVideoPlayer
+            series={playingSeries.series}
+            initialEpisode={playingSeries.episode}
+            initialSeason={playingSeries.season}
+            onClose={() => setPlayingSeries(null)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

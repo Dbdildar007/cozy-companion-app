@@ -58,6 +58,51 @@
     --font-display: 'Bebas Neue', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
+
+  .light {
+    --background: 0 0% 96%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 1 84% 47%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 15%;
+
+    --muted: 0 0% 88%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 0 0% 90%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 1 84% 47%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 15%;
+    --sidebar-primary: 1 84% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 92%;
+    --sidebar-accent-foreground: 0 0% 15%;
+    --sidebar-border: 0 0% 85%;
+    --sidebar-ring: 1 84% 47%;
+
+    --cine-surface: 0 0% 94%;
+    --cine-surface-hover: 0 0% 90%;
+    --cine-gradient-hero: linear-gradient(to top, hsl(0 0% 96%) 0%, transparent 60%);
+    --cine-gradient-row: linear-gradient(to right, hsl(0 0% 96%) 0%, transparent 5%, transparent 95%, hsl(0 0% 96%) 100%);
+    --cine-shadow: 0 8px 32px -8px hsl(0 0% 0% / 0.1);
+  }
 }
 
 @layer base {
@@ -99,12 +144,16 @@
 
 /* Hide vertical scrollbar for the entire application */
 html, body {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
-  display: none;             /* Chrome, Safari and Opera */
+  display: none;
 }
 
+/* Reduce hover effects in light mode */
+.light .group:hover .bg-gradient-to-t {
+  opacity: 0.7;
+}

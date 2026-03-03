@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Movie } from '@/data/movies';
-import { allMovies as localMovies } from '@/data/movies';
 import poster1 from "@/assets/poster-1.jpg";
 import poster2 from "@/assets/poster-2.jpg";
 import poster3 from "@/assets/poster-3.jpg";
@@ -30,75 +29,50 @@ const heroMap: Record<string, string> = {
   '/assets/hero-3.jpg': hero3,
 };
 
-function mapDbMovie(row: any): Movie {
-  const isUrl = (path: string) => path?.startsWith('http') || path?.startsWith('https');
+function resolveUrl(path: string | null | undefined, map: Record<string, string>): string {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return map[path] || path;
+}
 
-  // Support both local data format and DB format
-  const poster = row.poster_url || row.poster || '';
-  const heroImage = row.banner_url || row.hero_image || row.heroImage || '';
+function mapDbMovie(row: any): Movie {
   const genreField = row.genre || '';
   const genres = Array.isArray(genreField) ? genreField : (typeof genreField === 'string' && genreField ? genreField.split(',').map((g: string) => g.trim()) : []);
+  const catField = row.category || '';
+  const cats = Array.isArray(catField) ? catField : (typeof catField === 'string' && catField ? catField.split(',').map((c: string) => c.trim()) : []);
 
   return {
     id: row.id,
     title: row.title || 'Untitled',
-    year: row.release_year || row.year || new Date().getFullYear(),
+    year: row.release_year || new Date().getFullYear(),
     rating: Number(row.rating) || 0,
     genre: genres,
-    category: Array.isArray(row.category) ? row.category : genres,
+    category: cats.length > 0 ? cats : genres,
     language: row.language || 'English',
     description: row.description || '',
-    poster: isUrl(poster) ? poster : (posterMap[poster] || poster || ''),
-    heroImage: isUrl(heroImage) ? heroImage : (heroMap[heroImage] || heroImage || undefined),
-    url: row.video_url || row.url || undefined,
-    newly_added: row.newly_added || undefined,
+    poster: resolveUrl(row.poster_url, posterMap),
+    heroImage: resolveUrl(row.banner_url, heroMap) || undefined,
+    url: row.video_url || undefined,
     duration: row.duration || '',
-    isTrending: !!row.is_trending || !!row.isTrending,
-    isEditorChoice: !!row.is_editor_choice || !!row.isEditorChoice,
-    isSeries: !!row.is_series || !!row.isSeries,
+    isTrending: !!row.is_trending,
+    isEditorChoice: !!row.is_featured,
+    isSeries: !!row.is_series,
   };
 }
 
-const CACHE_KEY = 'movies_cache';
-const CACHE_DURATION = 5 * 60 * 1000;
-
 export const movieService = {
   async getAllMovies(): Promise<Movie[]> {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          return data.map(mapDbMovie);
-        }
-      }
-    } catch (e) {
-      console.log("cache read error:", e);
+    const { data, error } = await supabase
+      .from('movies')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error("DB fetch failed:", error);
+      return [];
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('movies')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        console.log("No data in DB, falling back to local data");
-        return localMovies;
-      }
-
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        data: data,
-        timestamp: Date.now()
-      }));
-
-      return data.map(mapDbMovie);
-    } catch (error) {
-      console.error("DB fetch failed, using local fallback:", error);
-      return localMovies;
-    }
+    return (data || []).map(mapDbMovie);
   },
 
   async getFeaturedMovies(): Promise<Movie[]> {
@@ -108,9 +82,7 @@ export const movieService = {
       .eq('is_featured', true)
       .limit(10);
 
-    if (error || !data || data.length === 0) {
-      return localMovies.filter(m => m.heroImage);
-    }
+    if (error || !data || data.length === 0) return [];
     return data.map(mapDbMovie);
   },
 
@@ -118,9 +90,9 @@ export const movieService = {
     const { data, error } = await supabase
       .from('movies')
       .select('*')
-      .ilike('genre', `%${category}%`);
+      .ilike('category', `%${category}%`);
 
-    if (error) throw error;
+    if (error) return [];
     return (data || []).map(mapDbMovie);
   },
 
@@ -130,7 +102,7 @@ export const movieService = {
       .select('*')
       .ilike('genre', `%${genre}%`);
 
-    if (error) throw error;
+    if (error) return [];
     return (data || []).map(mapDbMovie);
   },
 
@@ -147,11 +119,11 @@ export const movieService = {
     if (filters?.minRating) qb = qb.gte('rating', filters.minRating);
 
     const { data, error } = await qb.range(0, 50);
-    if (error) throw error;
+    if (error) return [];
     return (data || []).map(mapDbMovie);
   },
 
   clearCache(): void {
-    localStorage.removeItem(CACHE_KEY);
+    // no-op
   }
 };

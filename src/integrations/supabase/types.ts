@@ -53,17 +53,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "episodes_movie_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "episodes_season_id_fkey"
             columns: ["season_id"]
             isOneToOne: false
             referencedRelation: "seasons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "episodes_series_id_fkey"
-            columns: ["series_id"]
-            isOneToOne: false
-            referencedRelation: "series"
             referencedColumns: ["id"]
           },
         ]
@@ -119,12 +119,16 @@ export type Database = {
       movies: {
         Row: {
           banner_url: string | null
+          category: string | null
           created_at: string
           description: string | null
           duration: string | null
           genre: string | null
           id: string
           is_featured: boolean | null
+          is_series: boolean | null
+          is_trending: boolean | null
+          language: string | null
           poster_url: string | null
           rating: number | null
           release_year: number | null
@@ -134,12 +138,16 @@ export type Database = {
         }
         Insert: {
           banner_url?: string | null
+          category?: string | null
           created_at?: string
           description?: string | null
           duration?: string | null
           genre?: string | null
           id?: string
           is_featured?: boolean | null
+          is_series?: boolean | null
+          is_trending?: boolean | null
+          language?: string | null
           poster_url?: string | null
           rating?: number | null
           release_year?: number | null
@@ -149,12 +157,16 @@ export type Database = {
         }
         Update: {
           banner_url?: string | null
+          category?: string | null
           created_at?: string
           description?: string | null
           duration?: string | null
           genre?: string | null
           id?: string
           is_featured?: boolean | null
+          is_series?: boolean | null
+          is_trending?: boolean | null
+          language?: string | null
           poster_url?: string | null
           rating?: number | null
           release_year?: number | null
@@ -257,10 +269,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "seasons_series_id_fkey"
+            foreignKeyName: "seasons_movie_fkey"
             columns: ["series_id"]
             isOneToOne: false
-            referencedRelation: "series"
+            referencedRelation: "movies"
             referencedColumns: ["id"]
           },
         ]

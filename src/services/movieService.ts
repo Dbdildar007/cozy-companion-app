@@ -71,7 +71,7 @@ export const movieService = {
       console.error("DB fetch failed:", error);
       return [];
     }
-
+    console.log("Data",data)
     return (data || []).map(mapDbMovie);
   },
 

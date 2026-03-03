@@ -1,9 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Play, Download, Star, Clock, Calendar, Globe, Check, Plus, CheckCircle, Tv } from "lucide-react";
+import { X, Play, Download, Star, Clock, Calendar, Globe, Check, Plus, CheckCircle, Tv, AlertCircle } from "lucide-react";
 import type { Movie } from "@/data/movies";
-import { getSeriesData } from "@/data/series";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
+import { useSeriesDetail } from "@/hooks/useSeries";
 
 interface MovieModalProps {
   movie: Movie | null;
@@ -22,12 +22,8 @@ export default function MovieModal({
   isInWatchlist, onToggleWatchlist,
 }: MovieModalProps) {
   const isMobile = useIsMobile();
-  const [selectedSeason, setSelectedSeason] = useState(1);
 
   if (!movie) return null;
-
-  const seriesInfo = movie.isSeries ? getSeriesData(movie.id) : undefined;
-  const currentSeasonData = seriesInfo?.seasons.find(s => s.number === selectedSeason);
 
   const mobileVariants = {
     hidden: { y: "100%" },
@@ -68,7 +64,14 @@ export default function MovieModal({
           >
             {/* Header image */}
             <div className="relative h-64 md:h-72">
-              <img src={movie.heroImage || movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+              {movie.heroImage || movie.poster ? (
+                <img src={movie.heroImage || movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-secondary flex items-center justify-center">
+                  <AlertCircle className="w-16 h-16 text-muted-foreground" />
+                  <p className="text-muted-foreground text-sm mt-2">Image not available</p>
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
               <button
                 onClick={onClose}
@@ -106,11 +109,6 @@ export default function MovieModal({
                   <Globe className="w-3.5 h-3.5" />
                   {movie.language}
                 </span>
-                {movie.isSeries && seriesInfo && (
-                  <span className="text-primary font-medium">
-                    {seriesInfo.seasons.length} Season{seriesInfo.seasons.length > 1 ? "s" : ""}
-                  </span>
-                )}
               </div>
 
               <div className="flex gap-2 mb-4 flex-wrap">
@@ -140,44 +138,38 @@ export default function MovieModal({
               </div>
 
               {/* Action buttons */}
-{/* --- Replace lines 138 to 160 with this block --- */}
-<div className="flex flex-wrap gap-2 mb-4">
-  <button 
-    onClick={() => onWatch?.(movie)} 
-    className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-md font-semibold text-sm transition-colors"
-  >
-    <Play className="w-4 h-4 fill-current" />
-    {movie.isSeries ? "Play S1 E1" : "Watch Now"}
-  </button>
-  
-  <button 
-    onClick={() => onToggleWatchlist?.(movie.id)} 
-    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-colors ${
-      isInWatchlist 
-        ? "bg-primary/20 text-primary border border-primary/30" 
-        : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-    }`}
-  >
-    {isInWatchlist ? <CheckCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-    {isInWatchlist ? "Listed" : "My List"}
-  </button>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => onWatch?.(movie)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-md font-semibold text-sm transition-colors"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  Watch Now
+                </button>
 
-  <button className="flex items-center gap-2 bg-secondary/80 text-foreground px-5 py-2.5 rounded-full font-medium hover:bg-secondary transition-colors">
-    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-    {movie.userRating || "Rate"}
-  </button>
+                <button
+                  onClick={() => onToggleWatchlist?.(movie.id)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-colors ${
+                    isInWatchlist
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+                  }`}
+                >
+                  {isInWatchlist ? <CheckCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  {isInWatchlist ? "Listed" : "My List"}
+                </button>
 
-  <button 
-    onClick={() => onDownload(movie.id)} 
-    className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-3 rounded-md font-semibold text-sm transition-colors"
-  >
-    {downloadState?.status === "complete" ? (
-      <Check className="w-4 h-4 text-primary" />
-    ) : (
-      <Download className="w-4 h-4" />
-    )}
-  </button>
-</div>
+                <button
+                  onClick={() => onDownload(movie.id)}
+                  className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-3 rounded-md font-semibold text-sm transition-colors"
+                >
+                  {downloadState?.status === "complete" ? (
+                    <Check className="w-4 h-4 text-primary" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
 
               {/* Download progress */}
               {downloadState?.status === "downloading" && (
@@ -189,64 +181,12 @@ export default function MovieModal({
                 </div>
               )}
 
-              {/* Hotstar-style Season/Episode selector for series */}
-              {seriesInfo && (
-                <div className="mt-2">
-                  <h3 className="text-lg font-display tracking-wide text-foreground mb-3">EPISODES</h3>
-                  
-                  {/* Season tabs */}
-                  {seriesInfo.seasons.length > 1 && (
-                    <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
-                      {seriesInfo.seasons.map((season) => (
-                        <button
-                          key={season.number}
-                          onClick={() => setSelectedSeason(season.number)}
-                          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                            selectedSeason === season.number
-                              ? "bg-primary text-primary-foreground shadow-lg"
-                              : "bg-secondary text-secondary-foreground hover:bg-cine-surface-hover"
-                          }`}
-                        >
-                          Season {season.number}
-                          <span className="ml-1.5 text-xs opacity-70">
-                            ({season.episodes.length} ep)
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Episode list - Hotstar style */}
-                  <div className="space-y-2">
-                    {currentSeasonData?.episodes.map((episode) => (
-                      <button
-                        key={episode.id}
-                        onClick={() => onWatch?.(movie)}
-                        className="w-full text-left p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors group"
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Thumbnail placeholder */}
-                          <div className="relative flex-shrink-0 w-28 h-16 rounded-md overflow-hidden bg-muted">
-                            <img
-                              src={movie.poster}
-                              alt={episode.title}
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                              <Play className="w-6 h-6 text-primary-foreground fill-current" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-xs font-bold text-primary">E{episode.number}</span>
-                              <h4 className="text-sm font-medium text-foreground truncate">{episode.title}</h4>
-                            </div>
-                            <p className="text-xs text-muted-foreground mb-1">{episode.duration}</p>
-                            <p className="text-xs text-muted-foreground/80 line-clamp-2">{episode.description}</p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+              {/* No video available message */}
+              {!movie.url && !movie.isSeries && (
+                <div className="mt-4 p-4 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <AlertCircle className="w-5 h-5 text-destructive" />
+                    <p className="text-sm">Video not available for this title yet.</p>
                   </div>
                 </div>
               )}

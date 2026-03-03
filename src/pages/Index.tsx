@@ -6,7 +6,6 @@ import ContinueWatchingRow from "@/components/ContinueWatchingRow";
 import MovieModal from "@/components/MovieModal";
 import VideoPlayer from "@/components/VideoPlayer";
 import WatchPartyHistory from "@/components/WatchPartyHistory";
-import SeriesRow from "@/components/SeriesRow";
 import SeriesModal from "@/components/SeriesModal";
 import SeriesVideoPlayer from "@/components/SeriesVideoPlayer";
 import { type Movie } from "@/data/movies";
@@ -44,13 +43,12 @@ export default function Index() {
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [playingSeries, setPlayingSeries] = useState<{ series: Series; episode: SeriesEpisode; season: number } | null>(null);
 
-  // Simulate initial data load
   useEffect(() => {
     const t = setTimeout(() => setInitialLoad(false), 800);
     return () => clearTimeout(t);
   }, []);
 
-  // Listen for watch party invites via notifications
+  // Listen for watch party invites
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -93,7 +91,41 @@ export default function Index() {
       .filter(Boolean) as Movie[];
   }, [watchlist, allMovies]);
 
+  // When user clicks a movie: if it's a series, open SeriesModal. Otherwise open MovieModal.
+  const handleMovieSelect = useCallback((movie: Movie) => {
+    if (movie.isSeries) {
+      // Find matching series object from allSeries
+      const s = allSeries.find(s => s.id === movie.id);
+      if (s) {
+        setSelectedSeries(s);
+      } else {
+        // Fallback: create a series-like object
+        setSelectedSeries({
+          id: movie.id,
+          title: movie.title,
+          description: movie.description,
+          genre: movie.genre,
+          poster_url: movie.poster,
+          banner_url: movie.heroImage,
+          rating: movie.rating,
+          release_year: movie.year,
+          is_featured: !!movie.isEditorChoice,
+          isSeries: true,
+          language: movie.language,
+          category: movie.category,
+          duration: movie.duration,
+        });
+      }
+    } else {
+      setSelectedMovie(movie);
+    }
+  }, [allSeries]);
+
   const handleWatch = (movie: Movie) => {
+    if (movie.isSeries) {
+      handleMovieSelect(movie);
+      return;
+    }
     setSelectedMovie(null);
     setPlayingMovie(movie);
   };
@@ -102,18 +134,6 @@ export default function Index() {
     setSelectedSeries(null);
     setPlayingSeries({ series, episode, season });
   };
-
-  // Group series by genre
-  const seriesByGenre = useMemo(() => {
-    const genreMap: Record<string, Series[]> = {};
-    allSeries.forEach(s => {
-      s.genre.forEach(g => {
-        if (!genreMap[g]) genreMap[g] = [];
-        genreMap[g].push(s);
-      });
-    });
-    return genreMap;
-  }, [allSeries]);
 
   if (initialLoad || loading) {
     return (
@@ -130,7 +150,7 @@ export default function Index() {
       className="min-h-screen bg-background pb-20 md:pb-0 scrollbar-hide overflow-x-hidden"
     >
       <HeroCarousel
-        onMovieSelect={setSelectedMovie}
+        onMovieSelect={handleMovieSelect}
         onWatch={handleWatch}
         isInWatchlist={isInWatchlist}
         onToggleWatchlist={toggleWatchlist}
@@ -149,7 +169,7 @@ export default function Index() {
           <MovieRow
             title="My List"
             movies={myListMovies}
-            onMovieSelect={setSelectedMovie}
+            onMovieSelect={handleMovieSelect}
             onDownload={startDownload}
             getDownloadState={getDownloadState}
             getRating={getRating}
@@ -159,45 +179,25 @@ export default function Index() {
           />
         )}
 
-        {/* Series Section */}
-        {allSeries.length > 0 && (
-          <SeriesRow
-            title="TV Series"
-            seriesList={allSeries}
-            onSeriesSelect={setSelectedSeries}
-            onRate={(id, val) => setRating(id, val)}                // Add this
-            onToggleWatchlist={toggleWatchlist} // Add this
-          />
-        )}
-
-        {/* Series by genre */}
-        {Object.entries(seriesByGenre).map(([genre, list]) => (
-          list.length > 0 && (
-            <SeriesRow
-              key={`series-${genre}`}
-              title={`${genre} Series`}
-              seriesList={list}
-              onSeriesSelect={setSelectedSeries}
-              onRate={(id, val) => setRating(id, val)}// Add this
-              onToggleWatchlist={toggleWatchlist} // Add this
+        {/* All content grouped by category - movies and series together */}
+        {categories.map((category) => {
+          const categoryMovies = allMovies.filter(m => m.category.includes(category));
+          if (categoryMovies.length === 0) return null;
+          return (
+            <MovieRow
+              key={category}
+              title={category}
+              movies={categoryMovies}
+              onMovieSelect={handleMovieSelect}
+              onDownload={startDownload}
+              getDownloadState={getDownloadState}
+              getRating={getRating}
+              onRate={setRating}
+              isInWatchlist={isInWatchlist}
+              onToggleWatchlist={toggleWatchlist}
             />
-          )
-        ))}
-
-        {categories.map((category) => (
-          <MovieRow
-            key={category}
-            title={category}
-            movies={allMovies.filter(m => m.category.includes(category))}
-            onMovieSelect={setSelectedMovie}
-            onDownload={startDownload}
-            getDownloadState={getDownloadState}
-            getRating={getRating}
-            onRate={setRating}
-            isInWatchlist={isInWatchlist}
-            onToggleWatchlist={toggleWatchlist}
-          />
-        ))}
+          );
+        })}
       </div>
 
       <MovieModal

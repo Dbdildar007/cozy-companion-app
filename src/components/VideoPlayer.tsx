@@ -198,6 +198,17 @@ export default function VideoPlayer({
     v.muted = !isMuted;
     setIsMuted(!isMuted);
   };
+    const toggleFullscreen = async () => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      await el.requestFullscreen?.();
+      setIsFullscreen(true);
+    } else {
+      await document.exitFullscreen?.();
+      setIsFullscreen(false);
+    }
+  };
 
 
   
@@ -260,17 +271,7 @@ export default function VideoPlayer({
   }, []);
 
 
-  const toggleFullscreen = async () => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (!document.fullscreenElement) {
-      await el.requestFullscreen?.();
-      setIsFullscreen(true);
-    } else {
-      await document.exitFullscreen?.();
-      setIsFullscreen(false);
-    }
-  };
+
 
   const handleTimeUpdate = () => {
     const v = videoRef.current;

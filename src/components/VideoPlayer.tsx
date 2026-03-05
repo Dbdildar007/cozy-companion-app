@@ -210,6 +210,25 @@ export default function VideoPlayer({
     }
   };
 
+  const playEpisode = (episode: any) => {
+    if (controlsDisabled) return;
+    setCurrentEpisode(episode);
+    setShowEpisodes(false);
+    setShowNextEpisode(false);
+    setVideoEnded(false);
+    setShowRecommendations(false);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (seriesInfo) {
+      const season = seriesInfo.seasons.find(s => s.episodes.some(e => e.id === episode.id));
+      if (season) setSelectedSeason(season.number);
+    }
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+    resetControlsTimer();
+  };
 
   
 
@@ -332,25 +351,7 @@ export default function VideoPlayer({
     lastTapRef.current = { time: now, x: clientX };
   };
 
-  const playEpisode = (episode: any) => {
-    if (controlsDisabled) return;
-    setCurrentEpisode(episode);
-    setShowEpisodes(false);
-    setShowNextEpisode(false);
-    setVideoEnded(false);
-    setShowRecommendations(false);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    if (seriesInfo) {
-      const season = seriesInfo.seasons.find(s => s.episodes.some(e => e.id === episode.id));
-      if (season) setSelectedSeason(season.number);
-    }
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play();
-      setIsPlaying(true);
-    }
-    resetControlsTimer();
-  };
+  
 
   const cancelNextEpisode = () => {
     setShowNextEpisode(false);

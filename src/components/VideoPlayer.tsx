@@ -150,6 +150,58 @@ export default function VideoPlayer({
     return () => { if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current); };
   }, [isPlaying, resetControlsTimer]);
 
+
+  const togglePlay = () => {
+    if (controlsDisabled) return;
+    if (videoEnded) {
+      // Replay
+      const v = videoRef.current;
+      if (v) {
+        v.currentTime = 0;
+        v.play();
+        setIsPlaying(true);
+        setVideoEnded(false);
+        setShowRecommendations(false);
+      }
+      return;
+    }
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play(); setIsPlaying(true); }
+    else { v.pause(); setIsPlaying(false); }
+    if (watchPartyActive && isHost && onForceSyncPlayback) {
+      onForceSyncPlayback(!v.paused, v.currentTime);
+    }
+  };
+
+  const skip = (seconds: number) => {
+    if (controlsDisabled) return;
+    const v = videoRef.current;
+    if (v) {
+      v.currentTime = Math.max(0, Math.min(v.currentTime + seconds, duration));
+      if (watchPartyActive && isHost && onForceSyncPlayback) {
+        onForceSyncPlayback(!v.paused, v.currentTime);
+      }
+    }
+  };
+
+  const adjustVolume = (delta: number) => {
+    const newVol = Math.max(0, Math.min(1, volume + delta));
+    setVolume(newVol);
+    if (videoRef.current) videoRef.current.volume = newVol;
+    if (newVol > 0) setIsMuted(false);
+  };
+
+  const toggleMute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
+
+
+  
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (isLocked || controlsDisabled) return;
@@ -207,53 +259,6 @@ export default function VideoPlayer({
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
 
-  const togglePlay = () => {
-    if (controlsDisabled) return;
-    if (videoEnded) {
-      // Replay
-      const v = videoRef.current;
-      if (v) {
-        v.currentTime = 0;
-        v.play();
-        setIsPlaying(true);
-        setVideoEnded(false);
-        setShowRecommendations(false);
-      }
-      return;
-    }
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) { v.play(); setIsPlaying(true); }
-    else { v.pause(); setIsPlaying(false); }
-    if (watchPartyActive && isHost && onForceSyncPlayback) {
-      onForceSyncPlayback(!v.paused, v.currentTime);
-    }
-  };
-
-  const skip = (seconds: number) => {
-    if (controlsDisabled) return;
-    const v = videoRef.current;
-    if (v) {
-      v.currentTime = Math.max(0, Math.min(v.currentTime + seconds, duration));
-      if (watchPartyActive && isHost && onForceSyncPlayback) {
-        onForceSyncPlayback(!v.paused, v.currentTime);
-      }
-    }
-  };
-
-  const adjustVolume = (delta: number) => {
-    const newVol = Math.max(0, Math.min(1, volume + delta));
-    setVolume(newVol);
-    if (videoRef.current) videoRef.current.volume = newVol;
-    if (newVol > 0) setIsMuted(false);
-  };
-
-  const toggleMute = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = !isMuted;
-    setIsMuted(!isMuted);
-  };
 
   const toggleFullscreen = async () => {
     const el = containerRef.current;

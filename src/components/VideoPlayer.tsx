@@ -207,6 +207,29 @@ export default function VideoPlayer({
     resetControlsTimer();
   };
 
+    const togglePlay = () => {
+    if (controlsDisabled) return;
+    if (videoEnded) {
+      // Replay
+      const v = videoRef.current;
+      if (v) {
+        v.currentTime = 0;
+        v.play();
+        setIsPlaying(true);
+        setVideoEnded(false);
+        setShowRecommendations(false);
+      }
+      return;
+    }
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play(); setIsPlaying(true); }
+    else { v.pause(); setIsPlaying(false); }
+    if (watchPartyActive && isHost && onForceSyncPlayback) {
+      onForceSyncPlayback(!v.paused, v.currentTime);
+    }
+  };
+
   
 
   useEffect(() => {
@@ -342,28 +365,7 @@ export default function VideoPlayer({
   };
 
   
-  const togglePlay = () => {
-    if (controlsDisabled) return;
-    if (videoEnded) {
-      // Replay
-      const v = videoRef.current;
-      if (v) {
-        v.currentTime = 0;
-        v.play();
-        setIsPlaying(true);
-        setVideoEnded(false);
-        setShowRecommendations(false);
-      }
-      return;
-    }
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) { v.play(); setIsPlaying(true); }
-    else { v.pause(); setIsPlaying(false); }
-    if (watchPartyActive && isHost && onForceSyncPlayback) {
-      onForceSyncPlayback(!v.paused, v.currentTime);
-    }
-  };
+
 
 
   const currentSeasonData = seriesInfo?.seasons.find((s) => s.number === selectedSeason);

@@ -8,8 +8,7 @@ import {
   List, ChevronDown, SkipForward as NextIcon, Users,
   RefreshCw, ChevronUp
 } from "lucide-react";
-import type { Movie } from "@/data/movies";
-import { getSeriesData, type Episode, type Season } from "@/data/series";
+import type { Movie } from "@/services/movieService";
 
 interface VideoPlayerProps {
   movie: Movie;
@@ -57,13 +56,11 @@ export default function VideoPlayer({
   const [videoEnded, setVideoEnded] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
 
-  // Episode state
-  const seriesInfo = movie.isSeries ? getSeriesData(movie.id) : undefined;
+  // Episode state (series handled by SeriesVideoPlayer, kept for backward compat)
+  const seriesInfo = undefined as any;
   const [showEpisodes, setShowEpisodes] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState(1);
-  const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(
-    seriesInfo ? seriesInfo.seasons[0].episodes[0] : null
-  );
+  const [currentEpisode, setCurrentEpisode] = useState<any>(null);
 
   // Next episode auto-play
   const [showNextEpisode, setShowNextEpisode] = useState(false);
@@ -106,7 +103,7 @@ export default function VideoPlayer({
     return () => { if (syncIntervalRef.current) clearInterval(syncIntervalRef.current); };
   }, [watchPartyActive, isHost, onSyncPlayback]);
 
-  const getNextEpisode = useCallback((): Episode | null => {
+  const getNextEpisode = useCallback((): any | null => {
     if (!seriesInfo || !currentEpisode) return null;
     const currentSeasonData = seriesInfo.seasons.find(s => s.number === selectedSeason);
     if (!currentSeasonData) return null;
@@ -327,7 +324,7 @@ export default function VideoPlayer({
     lastTapRef.current = { time: now, x: clientX };
   };
 
-  const playEpisode = (episode: Episode) => {
+  const playEpisode = (episode: any) => {
     if (controlsDisabled) return;
     setCurrentEpisode(episode);
     setShowEpisodes(false);
@@ -712,19 +709,16 @@ export default function VideoPlayer({
             {/* Bottom controls */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-16 pb-4 px-4 md:px-6">
               {/* Progress bar */}
-              <div className="relative group mb-3">
-                <div className="h-1 group-hover:h-2 transition-all bg-muted/40 rounded-full overflow-hidden relative">
-                  <div className="absolute top-0 left-0 h-full bg-muted-foreground/30 rounded-full" style={{ width: `${bufferedPercent}%` }} />
-                  <div className="absolute top-0 left-0 h-full bg-primary rounded-full" style={{ width: `${progressPercent}%` }} />
+              <div className="relative h-2 w-full mb-6 group">
+                <div className="absolute inset-0 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-white/30" style={{ width: `${bufferedPercent}%` }} />
+                  <div className="h-full bg-red-600 absolute top-0 left-0 transition-all" style={{ width: `${progressPercent}%` }} />
                 </div>
                 <input type="range" min={0} max={duration || 0} step={0.1} value={currentTime}
                   onChange={handleSeek} disabled={controlsDisabled}
                   onMouseDown={() => setIsSeeking(true)} onMouseUp={() => setIsSeeking(false)}
                   onTouchStart={() => setIsSeeking(true)} onTouchEnd={() => setIsSeeking(false)}
-                  className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-default"
-                />
-                <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-4 md:h-4 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg"
-                  style={{ left: `calc(${progressPercent}% - 6px)` }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-default"
                 />
               </div>
 

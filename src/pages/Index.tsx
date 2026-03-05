@@ -8,7 +8,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import WatchPartyHistory from "@/components/WatchPartyHistory";
 import SeriesModal from "@/components/SeriesModal";
 import SeriesVideoPlayer from "@/components/SeriesVideoPlayer";
-import { type Movie } from "@/data/movies";
+import { type Movie } from "@/services/movieService";
 import { useDownloads } from "@/hooks/useDownloads";
 import { useRatings } from "@/hooks/useRatings";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
@@ -21,7 +21,6 @@ import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "sonner";
 import { useMovies } from '@/hooks/useMovies';
-import { useAllSeries } from '@/hooks/useSeries';
 import type { Series, SeriesEpisode } from '@/services/seriesService';
 
 export default function Index() {
@@ -37,9 +36,8 @@ export default function Index() {
   const { sendNotification } = useNotifications();
 
   const { allMovies, categories, featuredMovies, loading } = useMovies();
-  const { allSeries, loading: seriesLoading } = useAllSeries();
 
-  // Series state
+  // Series state - convert Movie to Series-like for the modal
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [playingSeries, setPlayingSeries] = useState<{ series: Series; episode: SeriesEpisode; season: number } | null>(null);
 
@@ -91,41 +89,28 @@ export default function Index() {
       .filter(Boolean) as Movie[];
   }, [watchlist, allMovies]);
 
-  // When user clicks a movie: if it's a series, open SeriesModal. Otherwise open MovieModal.
-  const handleMovieSelect = useCallback((movie: Movie) => {
+  // Convert a Movie with isSeries=true to a Series object for the modal
+  const movieToSeries = useCallback((movie: Movie): Series => ({
+    id: movie.id,
+    title: movie.title,
+    description: movie.description,
+    genre: movie.genre,
+    poster_url: movie.poster,
+    banner_url: movie.heroImage,
+    rating: movie.rating,
+    release_year: movie.year,
+    is_featured: false,
+  }), []);
+
+  const handleCardClick = useCallback((movie: Movie) => {
     if (movie.isSeries) {
-      // Find matching series object from allSeries
-      const s = allSeries.find(s => s.id === movie.id);
-      if (s) {
-        setSelectedSeries(s);
-      } else {
-        // Fallback: create a series-like object
-        setSelectedSeries({
-          id: movie.id,
-          title: movie.title,
-          description: movie.description,
-          genre: movie.genre,
-          poster_url: movie.poster,
-          banner_url: movie.heroImage,
-          rating: movie.rating,
-          release_year: movie.year,
-          is_featured: !!movie.isEditorChoice,
-          isSeries: true,
-          language: movie.language,
-          category: movie.category,
-          duration: movie.duration,
-        });
-      }
+      setSelectedSeries(movieToSeries(movie));
     } else {
       setSelectedMovie(movie);
     }
-  }, [allSeries]);
+  }, [movieToSeries]);
 
   const handleWatch = (movie: Movie) => {
-    if (movie.isSeries) {
-      handleMovieSelect(movie);
-      return;
-    }
     setSelectedMovie(null);
     setPlayingMovie(movie);
   };
@@ -150,7 +135,7 @@ export default function Index() {
       className="min-h-screen bg-background pb-20 md:pb-0 scrollbar-hide overflow-x-hidden"
     >
       <HeroCarousel
-        onMovieSelect={handleMovieSelect}
+        onMovieSelect={handleCardClick}
         onWatch={handleWatch}
         isInWatchlist={isInWatchlist}
         onToggleWatchlist={toggleWatchlist}
@@ -169,7 +154,24 @@ export default function Index() {
           <MovieRow
             title="My List"
             movies={myListMovies}
-            onMovieSelect={handleMovieSelect}
+            onMovieSelect={handleCardClick}
+            onDownload={startDownload}
+            getDownloadState={getDownloadState}
+            getRating={getRating}
+            onRate={setRating}
+            isInWatchlist={isInWatchlist}
+            onToggleWatchlist={toggleWatchlist}
+            showRemoveButton
+          />
+        )}
+
+        {/* All content in unified category rows */}
+        {categories.map((category) => (
+          <MovieRow
+            key={category}
+            title={category}
+            movies={allMovies.filter(m => m.category.includes(category))}
+            onMovieSelect={handleCardClick}
             onDownload={startDownload}
             getDownloadState={getDownloadState}
             getRating={getRating}
@@ -177,27 +179,7 @@ export default function Index() {
             isInWatchlist={isInWatchlist}
             onToggleWatchlist={toggleWatchlist}
           />
-        )}
-
-        {/* All content grouped by category - movies and series together */}
-        {categories.map((category) => {
-          const categoryMovies = allMovies.filter(m => m.category.includes(category));
-          if (categoryMovies.length === 0) return null;
-          return (
-            <MovieRow
-              key={category}
-              title={category}
-              movies={categoryMovies}
-              onMovieSelect={handleMovieSelect}
-              onDownload={startDownload}
-              getDownloadState={getDownloadState}
-              getRating={getRating}
-              onRate={setRating}
-              isInWatchlist={isInWatchlist}
-              onToggleWatchlist={toggleWatchlist}
-            />
-          );
-        })}
+        ))}
       </div>
 
       <MovieModal
@@ -216,6 +198,10 @@ export default function Index() {
         series={selectedSeries}
         onClose={() => setSelectedSeries(null)}
         onPlayEpisode={handlePlaySeriesEpisode}
+        userRating={selectedSeries ? getRating(selectedSeries.id) : 0}
+        onRate={setRating}
+        isInWatchlist={selectedSeries ? isInWatchlist(selectedSeries.id) : false}
+        onToggleWatchlist={toggleWatchlist}
       />
 
       <AnimatePresence>

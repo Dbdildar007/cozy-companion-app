@@ -14,6 +14,7 @@ export function useAllSeries() {
     const channel = supabase
       .channel('series-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'movies' }, () => {
+        seriesService.clearCache();
         refetch();
       })
       .subscribe();

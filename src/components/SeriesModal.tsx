@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Play, Star, Clock, Calendar, Globe, Tv, AlertCircle } from "lucide-react";
+import { X, Play, Star, Clock, Calendar, Globe, Tv, AlertCircle, Plus, CheckCircle, Download, Check } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeriesDetail } from "@/hooks/useSeries";
 import type { Series, SeriesEpisode } from "@/services/seriesService";
@@ -10,9 +10,13 @@ interface SeriesModalProps {
   series: Series | null;
   onClose: () => void;
   onPlayEpisode: (series: Series, episode: SeriesEpisode, seasonNumber: number) => void;
+  userRating?: number;
+  onRate?: (id: string, rating: number) => void;
+  isInWatchlist?: boolean;
+  onToggleWatchlist?: (id: string) => void;
 }
 
-export default function SeriesModal({ series, onClose, onPlayEpisode }: SeriesModalProps) {
+export default function SeriesModal({ series, onClose, onPlayEpisode, userRating = 0, onRate, isInWatchlist = false, onToggleWatchlist }: SeriesModalProps) {
   const isMobile = useIsMobile();
   const [selectedSeason, setSelectedSeason] = useState(1);
   const { series: seriesDetail, loading } = useSeriesDetail(series?.id || null);
@@ -101,7 +105,7 @@ export default function SeriesModal({ series, onClose, onPlayEpisode }: SeriesMo
                 </span>
                 <span className="flex items-center gap-1">
                   <Globe className="w-3.5 h-3.5" />
-                  {series.genre.join(", ") || "Drama"}
+                  {series.genre?.join(", ") || "Drama"}
                 </span>
                 {detail && (
                   <span className="text-primary font-medium">
@@ -111,7 +115,7 @@ export default function SeriesModal({ series, onClose, onPlayEpisode }: SeriesMo
               </div>
 
               <div className="flex gap-2 mb-4 flex-wrap">
-                {series.genre.map((g) => (
+                {series.genre?.map((g) => (
                   <span key={g} className="px-3 py-1 text-xs rounded-full bg-secondary text-secondary-foreground">
                     {g}
                   </span>
@@ -120,16 +124,48 @@ export default function SeriesModal({ series, onClose, onPlayEpisode }: SeriesMo
 
               <p className="text-foreground/80 text-sm leading-relaxed mb-6">{series.description}</p>
 
-              {/* Play first episode button */}
-              {detail && detail.seasons.length > 0 && detail.seasons[0].episodes.length > 0 && (
+              {/* Star rating - matches MovieModal */}
+              <div className="mb-6">
+                <p className="text-xs text-muted-foreground mb-2">Your Rating</p>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button key={star} onClick={() => onRate?.(series.id, star)}>
+                      <Star
+                        className={`w-6 h-6 transition-colors ${
+                          star <= userRating ? "text-cine-gold fill-cine-gold" : "text-muted-foreground"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action buttons - matches MovieModal layout */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {detail && detail.seasons.length > 0 && detail.seasons[0].episodes.length > 0 && (
+                  <button
+                    onClick={() => onPlayEpisode(series, detail.seasons[0].episodes[0], 1)}
+                    className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-md font-semibold text-sm transition-colors"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    Play S1 E1
+                  </button>
+                )}
+
                 <button
-                  onClick={() => onPlayEpisode(series, detail.seasons[0].episodes[0], 1)}
-                  className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-md font-semibold text-sm transition-colors mb-6"
+                  onClick={() => onToggleWatchlist?.(series.id)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-colors ${
+                    isInWatchlist
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+                  }`}
                 >
-                  <Play className="w-4 h-4 fill-current" />
-                  Play S1 E1
+                  {isInWatchlist ? <CheckCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  {isInWatchlist ? "Listed" : "My List"}
                 </button>
-              )}
+
+              
+              </div>
 
               {loading && <LoadingSpinner size="sm" text="Loading episodes..." />}
 
@@ -138,7 +174,6 @@ export default function SeriesModal({ series, onClose, onPlayEpisode }: SeriesMo
                 <div className="mt-2">
                   <h3 className="text-lg font-display tracking-wide text-foreground mb-3">EPISODES</h3>
                   
-                  {/* Season tabs */}
                   {detail.seasons.length > 1 && (
                     <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
                       {detail.seasons.map((season) => (
@@ -148,7 +183,7 @@ export default function SeriesModal({ series, onClose, onPlayEpisode }: SeriesMo
                           className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                             selectedSeason === season.number
                               ? "bg-primary text-primary-foreground shadow-lg"
-                              : "bg-secondary text-secondary-foreground hover:bg-cine-surface-hover"
+                              : "bg-secondary text-secondary-foreground hover:bg-accent"
                           }`}
                         >
                           Season {season.number}
@@ -181,7 +216,7 @@ export default function SeriesModal({ series, onClose, onPlayEpisode }: SeriesMo
                                   <Tv className="w-6 h-6 text-muted-foreground" />
                                 </div>
                               )}
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-background/40">
                                 {hasVideo ? (
                                   <Play className="w-6 h-6 text-primary-foreground fill-current" />
                                 ) : (
@@ -211,7 +246,7 @@ export default function SeriesModal({ series, onClose, onPlayEpisode }: SeriesMo
                 </div>
               )}
 
-              {detail && detail.seasons.length === 0 && (
+              {detail && detail.seasons.length === 0 && !loading && (
                 <div className="text-center py-8">
                   <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">No episodes available yet</p>

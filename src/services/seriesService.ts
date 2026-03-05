@@ -1,38 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import { posterMap, heroMap, resolveImageUrl } from './movieService';
 import poster1 from "@/assets/poster-1.jpg";
-import poster2 from "@/assets/poster-2.jpg";
-import poster3 from "@/assets/poster-3.jpg";
-import poster4 from "@/assets/poster-4.jpg";
-import poster5 from "@/assets/poster-5.jpg";
-import poster6 from "@/assets/poster-6.jpg";
-import poster7 from "@/assets/poster-7.jpg";
-import poster8 from "@/assets/poster-8.jpg";
-import hero1 from "@/assets/hero-1.jpg";
-import hero2 from "@/assets/hero-2.jpg";
-import hero3 from "@/assets/hero-3.jpg";
-
-const posterMap: Record<string, string> = {
-  '/assets/poster-1.jpg': poster1,
-  '/assets/poster-2.jpg': poster2,
-  '/assets/poster-3.jpg': poster3,
-  '/assets/poster-4.jpg': poster4,
-  '/assets/poster-5.jpg': poster5,
-  '/assets/poster-6.jpg': poster6,
-  '/assets/poster-7.jpg': poster7,
-  '/assets/poster-8.jpg': poster8,
-};
-
-const heroMap: Record<string, string> = {
-  '/assets/hero-1.jpg': hero1,
-  '/assets/hero-2.jpg': hero2,
-  '/assets/hero-3.jpg': hero3,
-};
-
-function resolveUrl(path: string | null | undefined, map: Record<string, string>): string {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return map[path] || path;
-}
 
 export interface SeriesEpisode {
   id: string;
@@ -63,10 +31,6 @@ export interface Series {
   rating: number;
   release_year: number;
   is_featured: boolean;
-  isSeries: boolean;
-  language?: string;
-  category?: string[];
-  duration?: string;
   seasons?: SeriesSeason[];
 }
 
@@ -74,29 +38,24 @@ export interface SeriesWithSeasons extends Series {
   seasons: SeriesSeason[];
 }
 
+const SERIES_CACHE_KEY = 'series_cache';
+const CACHE_DURATION = 5 * 60 * 1000;
+
 function mapSeries(row: any): Series {
   const genreField = row.genre || '';
   const genres = Array.isArray(genreField)
     ? genreField
     : (typeof genreField === 'string' && genreField ? genreField.split(',').map((g: string) => g.trim()) : []);
-  const catField = row.category || '';
-  const cats = Array.isArray(catField)
-    ? catField
-    : (typeof catField === 'string' && catField ? catField.split(',').map((c: string) => c.trim()) : []);
   return {
     id: row.id,
     title: row.title || 'Untitled',
     description: row.description || '',
     genre: genres,
-    poster_url: resolveUrl(row.poster_url, posterMap),
-    banner_url: resolveUrl(row.banner_url, heroMap) || undefined,
+    poster_url: resolveImageUrl(row.poster || row.poster_url, posterMap) || poster1,
+    banner_url: resolveImageUrl(row.hero_image || row.banner_url, heroMap),
     rating: Number(row.rating) || 0,
-    release_year: row.release_year || new Date().getFullYear(),
+    release_year: row.year || row.release_year || new Date().getFullYear(),
     is_featured: !!row.is_featured,
-    isSeries: true,
-    language: row.language || 'English',
-    category: cats,
-    duration: row.duration || '',
   };
 }
 
@@ -116,6 +75,19 @@ function mapEpisode(row: any, seriesId: string): SeriesEpisode {
 
 export const seriesService = {
   async getAllSeries(): Promise<Series[]> {
+    try {
+      const cached = localStorage.getItem(SERIES_CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.error("Cache read error:", e);
+    }
+
+    // Query movies table where is_series = true
     const { data, error } = await supabase
       .from('movies')
       .select('*')
@@ -123,21 +95,39 @@ export const seriesService = {
       .order('created_at', { ascending: false });
 
     if (error || !data) return [];
-    return data.map(mapSeries);
+
+    const mapped = data.map(mapSeries);
+
+    try {
+      localStorage.setItem(SERIES_CACHE_KEY, JSON.stringify({
+        data: mapped,
+        timestamp: Date.now(),
+      }));
+    } catch (e) {
+      console.error("Cache write error:", e);
+    }
+
+    return mapped;
   },
 
   async getSeriesWithSeasons(seriesId: string): Promise<SeriesWithSeasons | null> {
+    // Fetch from movies table
     const { data: seriesData, error: seriesError } = await supabase
       .from('movies')
       .select('*')
       .eq('id', seriesId)
-      .single();
+      .eq('is_series', true)
+      .maybeSingle();
 
     if (seriesError || !seriesData) return null;
 
     const { data: seasonsData, error: seasonsError } = await supabase
       .from('seasons')
-      .select(`id, season_number, title, episodes (*)`)
+      .select(`
+        id,
+        season_number,
+        episodes (*)
+      `)
       .eq('series_id', seriesId)
       .order('season_number', { ascending: true });
 
@@ -148,7 +138,6 @@ export const seriesService = {
     const seasons: SeriesSeason[] = (seasonsData || []).map((s: any) => ({
       id: s.id,
       number: s.season_number,
-      title: s.title,
       episodes: (s.episodes || [])
         .sort((a: any, b: any) => a.episode_number - b.episode_number)
         .map((e: any) => mapEpisode(e, seriesId)),
@@ -173,6 +162,6 @@ export const seriesService = {
   },
 
   clearCache(): void {
-    // no-op, react-query handles caching
+    localStorage.removeItem(SERIES_CACHE_KEY);
   },
 };

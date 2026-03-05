@@ -32,16 +32,16 @@ export default function SeriesCard({
       onHoverEnd={() => setHovered(false)}
       onClick={() => onSelect(series)}
     >
-      <div className="relative rounded-md overflow-hidden aspect-[2/3] bg-secondary shadow-lg">
+      <div className="relative rounded-md overflow-hidden aspect-[2/3] bg-slate-50 border border-slate-200 dark:border-slate-700 shadow-lg">
         {series.poster_url ? (
           <img
             src={series.poster_url}
             alt={series.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover:brightness-95 transition" 
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-secondary">
+          <div className="w-full h-full flex items-center justify-center bg-slate-50">
             <Tv className="w-8 h-8 text-muted-foreground" />
           </div>
         )}
@@ -54,13 +54,12 @@ export default function SeriesCard({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: hovered ? 1 : 0 }}
-          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-3 space-y-2"
+          className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent flex flex-col justify-end p-3 space-y-1"
         >
-          <p className="text-[10px] md:text-xs text-gray-200">
+          <p className="text-[10px] md:text-xs text-muted-foreground">
             {series.release_year} • {series.genre?.join(", ")}
           </p>
           
-          {/* 2. Fixed Rating Logic: Uses series.id and userRating prop */}
           {onRate && (
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -68,15 +67,15 @@ export default function SeriesCard({
                   key={star}
                   onClick={(e) => {
                     e.stopPropagation(); 
-                    onRate(series.id, star); // Pass ID and Star Value
+                    onRate(series.id, star);
                   }}
-                  className="focus:outline-none transition-transform active:scale-125"
+                  className="focus:outline-none transition-transform active:scale-125 p-0"
                 >
                   <Star
-                    className={`w-3.5 h-3.5 md:w-4 md:h-4 ${
+                    className={`w-3 h-3 transition-colors ${
                       star <= userRating
                         ? "text-cine-gold fill-cine-gold"
-                        : "text-gray-400"
+                        : "text-muted-foreground"
                     }`}
                   />
                 </button>
@@ -84,14 +83,13 @@ export default function SeriesCard({
             </div>
           )}
 
-          {/* 3. Fixed Watchlist Logic: Uses isWatchlisted prop and series.id */}
           {onToggleWatchlist && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onToggleWatchlist(series.id); // Pass ID
+                onToggleWatchlist(series.id);
               }}
-              className={`mt-2 flex items-center gap-1 text-xs font-medium transition-colors ${
+              className={`mt-1 flex items-center gap-1 text-xs font-medium transition-colors ${
                 isWatchlisted ? "text-primary" : "text-foreground"
               }`}
             >
@@ -109,6 +107,10 @@ export default function SeriesCard({
       <h3 className="mt-2 text-xs md:text-sm font-medium text-foreground truncate">
         {series.title}
       </h3>
+      <div className="flex items-center gap-1 mt-0.5">
+        <Star className="w-3 h-3 text-cine-gold fill-cine-gold" />
+        <span className="text-xs text-muted-foreground">{series.rating || "N/A"}</span>
+      </div>
     </motion.div>
   );
 }

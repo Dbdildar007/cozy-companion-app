@@ -1,5 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Movie } from '@/data/movies';
 import poster1 from "@/assets/poster-1.jpg";
 import poster2 from "@/assets/poster-2.jpg";
 import poster3 from "@/assets/poster-3.jpg";
@@ -12,7 +11,27 @@ import hero1 from "@/assets/hero-1.jpg";
 import hero2 from "@/assets/hero-2.jpg";
 import hero3 from "@/assets/hero-3.jpg";
 
-const posterMap: Record<string, string> = {
+export interface Movie {
+  id: string;
+  title: string;
+  year: number;
+  rating: number;
+  userRating?: number;
+  genre: string[];
+  category: string[];
+  language: string;
+  description: string;
+  poster: string;
+  heroImage?: string;
+  url?: string;
+  newly_added?: string;
+  duration: string;
+  isTrending?: boolean;
+  isEditorChoice?: boolean;
+  isSeries?: boolean;
+}
+
+export const posterMap: Record<string, string> = {
   '/assets/poster-1.jpg': poster1,
   '/assets/poster-2.jpg': poster2,
   '/assets/poster-3.jpg': poster3,
@@ -23,56 +42,81 @@ const posterMap: Record<string, string> = {
   '/assets/poster-8.jpg': poster8,
 };
 
-const heroMap: Record<string, string> = {
+export const heroMap: Record<string, string> = {
   '/assets/hero-1.jpg': hero1,
   '/assets/hero-2.jpg': hero2,
   '/assets/hero-3.jpg': hero3,
 };
 
-function resolveUrl(path: string | null | undefined, map: Record<string, string>): string {
-  if (!path) return '';
+export function resolveImageUrl(path: string | null | undefined, map: Record<string, string>): string | undefined {
+  if (!path) return undefined;
   if (path.startsWith('http')) return path;
-  return map[path] || path;
+  return map[path] || undefined;
 }
 
 function mapDbMovie(row: any): Movie {
   const genreField = row.genre || '';
   const genres = Array.isArray(genreField) ? genreField : (typeof genreField === 'string' && genreField ? genreField.split(',').map((g: string) => g.trim()) : []);
-  const catField = row.category || '';
-  const cats = Array.isArray(catField) ? catField : (typeof catField === 'string' && catField ? catField.split(',').map((c: string) => c.trim()) : []);
 
   return {
     id: row.id,
     title: row.title || 'Untitled',
-    year: row.release_year || new Date().getFullYear(),
+    year: row.release_year || row.year || new Date().getFullYear(),
     rating: Number(row.rating) || 0,
     genre: genres,
-    category: cats.length > 0 ? cats : genres,
+    category: Array.isArray(row.category) ? row.category : genres,
     language: row.language || 'English',
     description: row.description || '',
-    poster: resolveUrl(row.poster_url, posterMap),
-    heroImage: resolveUrl(row.banner_url, heroMap) || undefined,
-    url: row.video_url || undefined,
+    poster: resolveImageUrl(row.poster || row.poster_url, posterMap) || poster1,
+    heroImage: resolveImageUrl(row.hero_image || row.banner_url || row.heroImage, heroMap),
+    url: row.video_url || row.url || undefined,
+    newly_added: row.newly_added || undefined,
     duration: row.duration || '',
-    isTrending: !!row.is_trending,
-    isEditorChoice: !!row.is_featured,
-    isSeries: !!row.is_series,
+    isTrending: !!row.is_trending || !!row.isTrending,
+    isEditorChoice: !!row.is_editor_choice || !!row.isEditorChoice,
+    isSeries: !!row.is_series || !!row.isSeries,
   };
 }
 
+const CACHE_KEY = 'movies_cache';
+const CACHE_DURATION = 5 * 60 * 1000;
+
 export const movieService = {
   async getAllMovies(): Promise<Movie[]> {
-    const { data, error } = await supabase
-      .from('movies')
-      .select('*')
-      .order('created_at', { ascending: true });
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          return data.map(mapDbMovie);
+        }
+      }
+    } catch (e) {
+      console.log("cache read error:", e);
+    }
 
-    if (error) {
+    try {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .order('created_at', { ascending: true });
+      console.log("data",data,"error:",error)
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: data,
+        timestamp: Date.now()
+      }));
+
+      return data.map(mapDbMovie);
+    } catch (error) {
       console.error("DB fetch failed:", error);
       return [];
     }
-    console.log("Data",data)
-    return (data || []).map(mapDbMovie);
   },
 
   async getFeaturedMovies(): Promise<Movie[]> {
@@ -90,7 +134,7 @@ export const movieService = {
     const { data, error } = await supabase
       .from('movies')
       .select('*')
-      .ilike('category', `%${category}%`);
+      .ilike('genre', `%${category}%`);
 
     if (error) return [];
     return (data || []).map(mapDbMovie);
@@ -124,6 +168,6 @@ export const movieService = {
   },
 
   clearCache(): void {
-    // no-op
+    localStorage.removeItem(CACHE_KEY);
   }
 };

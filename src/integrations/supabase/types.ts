@@ -17,38 +17,48 @@ export type Database = {
       episodes: {
         Row: {
           created_at: string
-          description: string
-          duration: string
+          description: string | null
+          duration: string | null
           episode_number: number
           id: string
           season_id: string
+          series_id: string
           thumbnail_url: string | null
           title: string
           video_url: string | null
         }
         Insert: {
           created_at?: string
-          description?: string
-          duration?: string
+          description?: string | null
+          duration?: string | null
           episode_number: number
-          id: string
+          id?: string
           season_id: string
+          series_id: string
           thumbnail_url?: string | null
-          title?: string
+          title: string
           video_url?: string | null
         }
         Update: {
           created_at?: string
-          description?: string
-          duration?: string
+          description?: string | null
+          duration?: string | null
           episode_number?: number
           id?: string
           season_id?: string
+          series_id?: string
           thumbnail_url?: string | null
           title?: string
           video_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "episodes_movie_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "episodes_season_id_fkey"
             columns: ["season_id"]
@@ -65,7 +75,6 @@ export type Database = {
           id: string
           requester_id: string
           status: string
-          updated_at: string
         }
         Insert: {
           addressee_id: string
@@ -73,7 +82,6 @@ export type Database = {
           id?: string
           requester_id: string
           status?: string
-          updated_at?: string
         }
         Update: {
           addressee_id?: string
@@ -81,7 +89,6 @@ export type Database = {
           id?: string
           requester_id?: string
           status?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -91,15 +98,13 @@ export type Database = {
           id: string
           movie_id: string
           rating: number
-          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           movie_id: string
-          rating: number
-          updated_at?: string
+          rating?: number
           user_id: string
         }
         Update: {
@@ -107,78 +112,74 @@ export type Database = {
           id?: string
           movie_id?: string
           rating?: number
-          updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
       movies: {
         Row: {
-          category: string[]
+          banner_url: string | null
+          category: string | null
           created_at: string
-          description: string
-          duration: string
-          genre: string[]
-          hero_image: string | null
+          description: string | null
+          duration: string | null
+          genre: string | null
           id: string
-          is_editor_choice: boolean
-          is_featured: boolean
-          is_series: boolean
-          is_trending: boolean
-          language: string
-          newly_added: string | null
-          poster: string
-          rating: number
+          is_featured: boolean | null
+          is_series: boolean | null
+          is_trending: boolean | null
+          language: string | null
+          poster_url: string | null
+          rating: number | null
+          release_year: number | null
           title: string
-          url: string | null
-          year: number
+          updated_at: string
+          video_url: string | null
         }
         Insert: {
-          category?: string[]
+          banner_url?: string | null
+          category?: string | null
           created_at?: string
-          description?: string
-          duration?: string
-          genre?: string[]
-          hero_image?: string | null
-          id: string
-          is_editor_choice?: boolean
-          is_featured?: boolean
-          is_series?: boolean
-          is_trending?: boolean
-          language?: string
-          newly_added?: string | null
-          poster?: string
-          rating?: number
+          description?: string | null
+          duration?: string | null
+          genre?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_series?: boolean | null
+          is_trending?: boolean | null
+          language?: string | null
+          poster_url?: string | null
+          rating?: number | null
+          release_year?: number | null
           title: string
-          url?: string | null
-          year: number
+          updated_at?: string
+          video_url?: string | null
         }
         Update: {
-          category?: string[]
+          banner_url?: string | null
+          category?: string | null
           created_at?: string
-          description?: string
-          duration?: string
-          genre?: string[]
-          hero_image?: string | null
+          description?: string | null
+          duration?: string | null
+          genre?: string | null
           id?: string
-          is_editor_choice?: boolean
-          is_featured?: boolean
-          is_series?: boolean
-          is_trending?: boolean
-          language?: string
-          newly_added?: string | null
-          poster?: string
-          rating?: number
+          is_featured?: boolean | null
+          is_series?: boolean | null
+          is_trending?: boolean | null
+          language?: string | null
+          poster_url?: string | null
+          rating?: number | null
+          release_year?: number | null
           title?: string
-          url?: string | null
-          year?: number
+          updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }
       notifications: {
         Row: {
           created_at: string
-          data: Json | null
+          data: Json
           id: string
           is_read: boolean
           message: string
@@ -188,7 +189,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          data?: Json | null
+          data?: Json
           id?: string
           is_read?: boolean
           message?: string
@@ -198,7 +199,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          data?: Json | null
+          data?: Json
           id?: string
           is_read?: boolean
           message?: string
@@ -212,33 +213,33 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
-          display_name: string
+          display_name: string | null
           id: string
           is_online: boolean
           last_seen: string | null
-          unique_id: string
+          unique_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
-          display_name?: string
+          display_name?: string | null
           id?: string
           is_online?: boolean
           last_seen?: string | null
-          unique_id?: string
+          unique_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
-          display_name?: string
+          display_name?: string | null
           id?: string
           is_online?: boolean
           last_seen?: string | null
-          unique_id?: string
+          unique_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -250,28 +251,73 @@ export type Database = {
           id: string
           season_number: number
           series_id: string
+          title: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           season_number: number
           series_id: string
+          title?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           season_number?: number
           series_id?: string
+          title?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "seasons_movie_id_fkey"
+            foreignKeyName: "seasons_movie_fkey"
             columns: ["series_id"]
             isOneToOne: false
             referencedRelation: "movies"
             referencedColumns: ["id"]
           },
         ]
+      }
+      series: {
+        Row: {
+          banner_url: string | null
+          created_at: string
+          description: string | null
+          genre: string | null
+          id: string
+          is_featured: boolean | null
+          poster_url: string | null
+          rating: number | null
+          release_year: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          banner_url?: string | null
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          is_featured?: boolean | null
+          poster_url?: string | null
+          rating?: number | null
+          release_year?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          banner_url?: string | null
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          is_featured?: boolean | null
+          poster_url?: string | null
+          rating?: number | null
+          release_year?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       watch_parties: {
         Row: {
@@ -283,7 +329,6 @@ export type Database = {
           is_playing: boolean
           movie_id: string
           status: string
-          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -294,7 +339,6 @@ export type Database = {
           is_playing?: boolean
           movie_id: string
           status?: string
-          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -305,7 +349,6 @@ export type Database = {
           is_playing?: boolean
           movie_id?: string
           status?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -337,44 +380,30 @@ export type Database = {
           movie_id?: string
           started_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "watch_party_history_movie_id_fkey"
-            columns: ["movie_id"]
-            isOneToOne: false
-            referencedRelation: "movies"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       watch_progress: {
         Row: {
           current_time_sec: number
           duration_sec: number
-          episode_id: string | null
           id: string
           last_watched: string
-          media_type: string | null
           movie_id: string
           user_id: string
         }
         Insert: {
           current_time_sec?: number
           duration_sec?: number
-          episode_id?: string | null
           id?: string
           last_watched?: string
-          media_type?: string | null
           movie_id: string
           user_id: string
         }
         Update: {
           current_time_sec?: number
           duration_sec?: number
-          episode_id?: string | null
           id?: string
           last_watched?: string
-          media_type?: string | null
           movie_id?: string
           user_id?: string
         }

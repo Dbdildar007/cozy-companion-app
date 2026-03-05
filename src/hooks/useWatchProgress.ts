@@ -84,20 +84,16 @@ setProgressList((prev) => {
       debounceRef.current[movieId] = setTimeout(async () => {
         const percent = currentTime / duration;
         if (percent > 0.95 || currentTime < 5) {
-  const query = supabase.from("watch_progress").delete().eq("user_id", user.id).eq("movie_id", movieId);
-  if (episodeId) query.eq("episode_id", episodeId);
-  await query;
+  await supabase.from("watch_progress").delete().eq("user_id", user.id).eq("movie_id", movieId);
 } else {
        await (supabase.from("watch_progress") as any).upsert({
   user_id: user.id,
   movie_id: movieId,
-  episode_id: episodeId || null,
   current_time_sec: Math.round(currentTime),
   duration_sec: Math.round(duration),
-  media_type: mediaType,
   last_watched: new Date().toISOString(),
 }, { 
-  onConflict: "user_id,movie_id,episode_id"
+  onConflict: "user_id,movie_id"
 });
         }
       }, 3000);

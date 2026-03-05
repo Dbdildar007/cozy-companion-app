@@ -155,12 +155,12 @@ export default function VideoPlayer({
       if (isLocked || controlsDisabled) return;
       switch (e.key) {
         case " ": case "k": e.preventDefault(); togglePlay(); break;
-        case "ArrowRight": skip(10); break;
-        case "ArrowLeft": skip(-10); break;
+        case "ArrowRight": e.preventDefault(); skip(10); break;
+        case "ArrowLeft": e.preventDefault(); skip(-10); break;
         case "ArrowUp": e.preventDefault(); adjustVolume(0.1); break;
         case "ArrowDown": e.preventDefault(); adjustVolume(-0.1); break;
-        case "f": toggleFullscreen(); break;
-        case "m": toggleMute(); break;
+        case "f": e.preventDefault(); toggleFullscreen(); break;
+        case "m": e.preventDefault(); toggleMute(); break;
         case "n": { const next = getNextEpisode(); if (next) playEpisode(next); break; }
         case "Escape":
           if (showRecommendations) setShowRecommendations(false);
@@ -174,8 +174,10 @@ export default function VideoPlayer({
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isLocked, isFullscreen, volume, isPlaying, showEpisodes, showNextEpisode, controlsDisabled, showRecommendations]);
-
+  }, [isLocked, isFullscreen, volume, isPlaying, showEpisodes, 
+  showNextEpisode, controlsDisabled, showRecommendations,
+  togglePlay, skip, adjustVolume, toggleFullscreen, 
+  toggleMute, getNextEpisode, playEpisode, handleClose, resetControlsTimer]);
   const handleVideoEnded = useCallback(() => {
     setIsPlaying(false);
     setVideoEnded(true);

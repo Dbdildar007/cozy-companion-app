@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { User, Settings, LogOut, ChevronRight, Heart, Clock, Star, Users, Copy, KeyRound } from "lucide-react";
+import { User, Settings, LogOut, ChevronRight, Heart, Clock, Star, Users, Copy, KeyRound, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -21,11 +21,13 @@ export default function ProfilePage() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Forgot password state
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetEmailError, setResetEmailError] = useState("");
+  // Change password state
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -65,33 +67,20 @@ export default function ProfilePage() {
     }
   };
 
-  const validateEmail = (email: string): boolean => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email.trim());
-  };
-
-  const handleForgotPassword = async () => {
-    setResetEmailError("");
-    const trimmed = resetEmail.trim();
-    if (!trimmed) {
-      setResetEmailError("Please enter your email address.");
-      return;
-    }
-    if (!validateEmail(trimmed)) {
-      setResetEmailError("Please enter a valid email address.");
-      return;
-    }
-    setResetLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-      redirectTo: window.location.origin,
-    });
-    setResetLoading(false);
+  const handleChangePassword = async () => {
+    setPasswordError("");
+    if (newPassword.length < 6) { setPasswordError("Password must be at least 6 characters."); return; }
+    if (newPassword !== confirmPassword) { setPasswordError("Passwords do not match."); return; }
+    setChangePasswordLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setChangePasswordLoading(false);
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Password reset link sent! Check your email.");
-      setShowForgotPassword(false);
-      setResetEmail("");
+      toast.success("Password changed successfully!");
+      setShowChangePassword(false);
+      setNewPassword("");
+      setConfirmPassword("");
     }
   };
 
@@ -157,16 +146,16 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* Forgot Password */}
+      {/* Change Password */}
       {user && (
         <div className="mb-6">
-          {!showForgotPassword ? (
+          {!showChangePassword ? (
             <button
-              onClick={() => { setShowForgotPassword(true); setResetEmail(user.email || ""); }}
+              onClick={() => setShowChangePassword(true)}
               className="w-full flex items-center gap-4 p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
             >
               <KeyRound className="w-5 h-5 text-primary" />
-              <span className="flex-1 text-left text-sm font-medium text-foreground">Reset Password</span>
+              <span className="flex-1 text-left text-sm font-medium text-foreground">Change Password</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           ) : (
@@ -177,31 +166,42 @@ export default function ProfilePage() {
             >
               <div className="flex items-center gap-2 mb-1">
                 <KeyRound className="w-5 h-5 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Reset Password</h3>
+                <h3 className="text-sm font-semibold text-foreground">Change Password</h3>
               </div>
-              <p className="text-xs text-muted-foreground">We'll send a password reset link to your email.</p>
-              <div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => { setResetEmail(e.target.value); setResetEmailError(""); }}
-                  placeholder="Enter your email"
-                  className="w-full bg-background text-foreground placeholder:text-muted-foreground rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-border"
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setPasswordError(""); }}
+                  placeholder="New password (min 6 chars)"
+                  className="w-full bg-background text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-border"
                 />
-                {resetEmailError && (
-                  <p className="text-xs text-destructive mt-1">{resetEmailError}</p>
-                )}
+                <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {showNewPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+                </button>
               </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(""); }}
+                  placeholder="Confirm new password"
+                  className="w-full bg-background text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-border"
+                />
+              </div>
+              {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
               <div className="flex gap-2">
                 <button
-                  onClick={handleForgotPassword}
-                  disabled={resetLoading}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50"
+                  onClick={handleChangePassword}
+                  disabled={changePasswordLoading}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {resetLoading ? "Sending..." : "Send Reset Link"}
+                  {changePasswordLoading ? <><Loader2 className="w-4 h-4 animate-spin" />Updating...</> : "Update Password"}
                 </button>
                 <button
-                  onClick={() => { setShowForgotPassword(false); setResetEmailError(""); }}
+                  onClick={() => { setShowChangePassword(false); setPasswordError(""); setNewPassword(""); setConfirmPassword(""); }}
                   className="px-4 py-2.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground text-sm transition-colors"
                 >
                   Cancel

@@ -150,88 +150,6 @@ export default function VideoPlayer({
     return () => { if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current); };
   }, [isPlaying, resetControlsTimer]);
 
-
-  const skip = (seconds: number) => {
-    if (controlsDisabled) return;
-    const v = videoRef.current;
-    if (v) {
-      v.currentTime = Math.max(0, Math.min(v.currentTime + seconds, duration));
-      if (watchPartyActive && isHost && onForceSyncPlayback) {
-        onForceSyncPlayback(!v.paused, v.currentTime);
-      }
-    }
-  };
-
-  const adjustVolume = (delta: number) => {
-    const newVol = Math.max(0, Math.min(1, volume + delta));
-    setVolume(newVol);
-    if (videoRef.current) videoRef.current.volume = newVol;
-    if (newVol > 0) setIsMuted(false);
-  };
-
-  const toggleMute = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = !isMuted;
-    setIsMuted(!isMuted);
-  };
-    const toggleFullscreen = async () => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (!document.fullscreenElement) {
-      await el.requestFullscreen?.();
-      setIsFullscreen(true);
-    } else {
-      await document.exitFullscreen?.();
-      setIsFullscreen(false);
-    }
-  };
-
-  const playEpisode = (episode: any) => {
-    if (controlsDisabled) return;
-    setCurrentEpisode(episode);
-    setShowEpisodes(false);
-    setShowNextEpisode(false);
-    setVideoEnded(false);
-    setShowRecommendations(false);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    if (seriesInfo) {
-      const season = seriesInfo.seasons.find(s => s.episodes.some(e => e.id === episode.id));
-      if (season) setSelectedSeason(season.number);
-    }
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play();
-      setIsPlaying(true);
-    }
-    resetControlsTimer();
-  };
-
-    const togglePlay = () => {
-    if (controlsDisabled) return;
-    if (videoEnded) {
-      // Replay
-      const v = videoRef.current;
-      if (v) {
-        v.currentTime = 0;
-        v.play();
-        setIsPlaying(true);
-        setVideoEnded(false);
-        setShowRecommendations(false);
-      }
-      return;
-    }
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) { v.play(); setIsPlaying(true); }
-    else { v.pause(); setIsPlaying(false); }
-    if (watchPartyActive && isHost && onForceSyncPlayback) {
-      onForceSyncPlayback(!v.paused, v.currentTime);
-    }
-  };
-
-  
-
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (isLocked || controlsDisabled) return;
@@ -256,10 +174,8 @@ export default function VideoPlayer({
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isLocked, isFullscreen, volume, isPlaying, showEpisodes, 
-  showNextEpisode, controlsDisabled, showRecommendations,
-  togglePlay, skip, adjustVolume, toggleFullscreen, 
-  toggleMute, getNextEpisode, playEpisode, handleClose, resetControlsTimer]);
+  }, [isLocked, isFullscreen, volume, isPlaying, showEpisodes, showNextEpisode, controlsDisabled, showRecommendations]);
+
   const handleVideoEnded = useCallback(() => {
     setIsPlaying(false);
     setVideoEnded(true);
@@ -289,8 +205,65 @@ export default function VideoPlayer({
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
 
+  const togglePlay = () => {
+    if (controlsDisabled) return;
+    if (videoEnded) {
+      // Replay
+      const v = videoRef.current;
+      if (v) {
+        v.currentTime = 0;
+        v.play();
+        setIsPlaying(true);
+        setVideoEnded(false);
+        setShowRecommendations(false);
+      }
+      return;
+    }
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play(); setIsPlaying(true); }
+    else { v.pause(); setIsPlaying(false); }
+    if (watchPartyActive && isHost && onForceSyncPlayback) {
+      onForceSyncPlayback(!v.paused, v.currentTime);
+    }
+  };
 
+  const skip = (seconds: number) => {
+    if (controlsDisabled) return;
+    const v = videoRef.current;
+    if (v) {
+      v.currentTime = Math.max(0, Math.min(v.currentTime + seconds, duration));
+      if (watchPartyActive && isHost && onForceSyncPlayback) {
+        onForceSyncPlayback(!v.paused, v.currentTime);
+      }
+    }
+  };
 
+  const adjustVolume = (delta: number) => {
+    const newVol = Math.max(0, Math.min(1, volume + delta));
+    setVolume(newVol);
+    if (videoRef.current) videoRef.current.volume = newVol;
+    if (newVol > 0) setIsMuted(false);
+  };
+
+  const toggleMute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
+
+  const toggleFullscreen = async () => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      await el.requestFullscreen?.();
+      setIsFullscreen(true);
+    } else {
+      await document.exitFullscreen?.();
+      setIsFullscreen(false);
+    }
+  };
 
   const handleTimeUpdate = () => {
     const v = videoRef.current;
@@ -351,7 +324,25 @@ export default function VideoPlayer({
     lastTapRef.current = { time: now, x: clientX };
   };
 
-  
+  const playEpisode = (episode: any) => {
+    if (controlsDisabled) return;
+    setCurrentEpisode(episode);
+    setShowEpisodes(false);
+    setShowNextEpisode(false);
+    setVideoEnded(false);
+    setShowRecommendations(false);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (seriesInfo) {
+      const season = seriesInfo.seasons.find(s => s.episodes.some(e => e.id === episode.id));
+      if (season) setSelectedSeason(season.number);
+    }
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+    resetControlsTimer();
+  };
 
   const cancelNextEpisode = () => {
     setShowNextEpisode(false);
@@ -363,10 +354,6 @@ export default function VideoPlayer({
       onPlayMovie(rec);
     }
   };
-
-  
-
-
 
   const currentSeasonData = seriesInfo?.seasons.find((s) => s.number === selectedSeason);
   const nextEpisode = getNextEpisode();

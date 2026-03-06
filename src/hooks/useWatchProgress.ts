@@ -103,7 +103,7 @@ setProgressList((prev) => {
             last_watched: new Date().toISOString(),
           });
         }
-      }, 3000);
+      }, 1000);
     }
   }, [user]);
 

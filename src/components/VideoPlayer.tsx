@@ -137,6 +137,27 @@ export default function VideoPlayer({
     onClose();
   };
 
+const skip = useCallback((seconds: number) => {
+  if (controlsDisabled) return;
+  const v = videoRef.current;
+  if (v) {
+    // Use v.duration directly to get the live value
+    const maxTime = v.duration || duration; 
+    v.currentTime = Math.max(0, Math.min(v.currentTime + seconds, maxTime));
+    
+    if (watchPartyActive && isHost && onForceSyncPlayback) {
+      onForceSyncPlayback(!v.paused, v.currentTime);
+    }
+  }
+}, [controlsDisabled, duration, watchPartyActive, isHost, onForceSyncPlayback]);
+
+  const adjustVolume = (delta: number) => {
+    const newVol = Math.max(0, Math.min(1, volume + delta));
+    setVolume(newVol);
+    if (videoRef.current) videoRef.current.volume = newVol;
+    if (newVol > 0) setIsMuted(false);
+  };
+  
   const resetControlsTimer = useCallback(() => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -174,7 +195,7 @@ export default function VideoPlayer({
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isLocked, isFullscreen, volume, isPlaying, showEpisodes, showNextEpisode, controlsDisabled, showRecommendations]);
+  }, [isLocked, isFullscreen, volume, isPlaying, showEpisodes, showNextEpisode, controlsDisabled, showRecommendations, skip]);
 
   const handleVideoEnded = useCallback(() => {
     setIsPlaying(false);
@@ -228,23 +249,6 @@ export default function VideoPlayer({
     }
   };
 
-  const skip = (seconds: number) => {
-    if (controlsDisabled) return;
-    const v = videoRef.current;
-    if (v) {
-      v.currentTime = Math.max(0, Math.min(v.currentTime + seconds, duration));
-      if (watchPartyActive && isHost && onForceSyncPlayback) {
-        onForceSyncPlayback(!v.paused, v.currentTime);
-      }
-    }
-  };
-
-  const adjustVolume = (delta: number) => {
-    const newVol = Math.max(0, Math.min(1, volume + delta));
-    setVolume(newVol);
-    if (videoRef.current) videoRef.current.volume = newVol;
-    if (newVol > 0) setIsMuted(false);
-  };
 
   const toggleMute = () => {
     const v = videoRef.current;

@@ -68,9 +68,9 @@ export default function SeriesModal({ series, onClose, onPlayEpisode, userRating
             }`}
           >
             {/* Header image */}
-            <div className="relative aspect-video">
+            <div className="relative h-64 md:h-72">
               {series.banner_url || series.poster_url ? (
-                <img src={series.banner_url || series.poster_url} alt={series.title} className="w-full h-full object-cover object-center" />
+                <img src={series.banner_url || series.poster_url} alt={series.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-secondary flex items-center justify-center">
                   <Tv className="w-16 h-16 text-muted-foreground" />
@@ -89,7 +89,7 @@ export default function SeriesModal({ series, onClose, onPlayEpisode, userRating
               </div>
             </div>
 
-            <div className="px-6 pb-8 -mt-12 md:-mt-16 relative">
+            <div className="px-6 pb-8 -mt-16 relative">
               <h2 className="text-3xl font-display tracking-wider text-foreground mb-2">
                 {series.title.toUpperCase()}
               </h2>

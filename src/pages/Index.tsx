@@ -27,7 +27,7 @@ export default function Index() {
   const { user } = useAuth();
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [playingMovie, setPlayingMovie] = useState<Movie | null>(null);
-  const [initialLoad, setInitialLoad] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(false);
   const { startDownload, getDownloadState } = useDownloads();
   const { getRating, setRating } = useRatings();
   const { updateProgress, getProgress, getContinueWatching, clearProgress } = useWatchProgress();
@@ -140,7 +140,7 @@ export default function Index() {
     setSelectedSeries(movieToSeries(movie));
   }, [movieToSeries]);
 
-  if (loading && allMovies.length === 0){
+ if (loading && allMovies.length === 0 && !user){
     return (
       <div className="min-h-screen bg-background">
         <LoadingSpinner fullScreen text="Loading CineStream..." />

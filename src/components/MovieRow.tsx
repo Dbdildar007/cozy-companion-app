@@ -57,11 +57,11 @@ export default function MovieRow({
             <div key={movie.id} className="relative flex-shrink-0 group/card">
               {showRemoveButton && onToggleWatchlist && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onToggleWatchlist(movie.id); }}
-                  className="absolute -top-1 -right-1 z-20 p-1 rounded-full bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/80 transition-colors opacity-0 group-hover/card:opacity-100"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+  onClick={(e) => { e.stopPropagation(); onToggleWatchlist(movie.id); }}
+  className="absolute -top-1 -right-1 z-20 p-1 rounded-full bg-destructive text-destructive-foreground opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity"
+>
+  <X className="w-3 h-3" />
+</button>
               )}
               <MovieCard
                 movie={movie}

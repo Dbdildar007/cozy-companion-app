@@ -41,10 +41,10 @@ export default function Index() {
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [playingSeries, setPlayingSeries] = useState<{ series: Series; episode: SeriesEpisode; season: number } | null>(null);
 
-  useEffect(() => {
-    const t = setTimeout(() => setInitialLoad(false), 800);
-    return () => clearTimeout(t);
-  }, []);
+  //useEffect(() => {
+    //const t = setTimeout(() => setInitialLoad(false), 800);
+    //return () => clearTimeout(t);
+  //}, []);
 
   // Listen for watch party invites
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function Index() {
     setSelectedSeries(movieToSeries(movie));
   }, [movieToSeries]);
 
-  if (initialLoad || loading) {
+  if (loading && allMovies.length === 0){
     return (
       <div className="min-h-screen bg-background">
         <LoadingSpinner fullScreen text="Loading CineStream..." />

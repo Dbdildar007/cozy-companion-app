@@ -56,18 +56,21 @@ export function useWatchProgress() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progressList));
   }, [progressList]);
 
- const updateProgress = useCallback((movieId: string, currentTime: number, duration: number, mediaType: 'movie' | 'series' = 'movie', episodeId?: string) => {
+ const updateProgress = useCallback((movieId: string, currentTime: number, duration: number, mediaType: 'movie' | 'series' = 'movie', episodeId?: string, 
+  seasonNumber?: number, episodeNumber?: number) => {
     if (duration <= 0) return;
 
     // 1. IMMEDIATE LOCAL UPDATE (Optimistic UI)
-    const newItem: WatchProgress = { 
-      movieId, 
-      episodeId, 
-      mediaType, 
-      currentTime, 
-      duration, 
-      lastWatched: Date.now() 
-    };
+ const newItem: WatchProgress = { 
+  movieId, 
+  episodeId, 
+  mediaType, 
+  currentTime, 
+  duration, 
+  seasonNumber, // Add this
+  episodeNumber, // Add this
+  lastWatched: Date.now() 
+};
 
     setProgressList((prev) => {
       // Filter out the old version of this specific item/episode
@@ -103,9 +106,11 @@ export function useWatchProgress() {
             user_id: user.id,
             movie_id: movieId,
             episode_id: episodeVal,
+            season_number: seasonNumber,  
+            episode_number: episodeNumber, 
             current_time_sec: Math.round(currentTime),
             duration_sec: Math.round(duration),
-            media_type: mediaType,
+            media_type: mediaType === 'series' ? 'tv_show' : 'movie',
             last_watched: new Date().toISOString(),
           });
         }

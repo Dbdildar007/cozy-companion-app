@@ -29,19 +29,19 @@ export function useWatchProgress() {
  // Load from DB on login
   useEffect(() => {
     if (!user) return;
-    const fetchProgress = async () => {
+  const fetchProgress = async () => {
       const { data } = await supabase
         .from("watch_progress")
-        .select("movie_id, current_time_sec, duration_sec, last_watched")
+        .select("movie_id, episode_id, media_type, current_time_sec, duration_sec, last_watched")
         .eq("user_id", user.id);
 
       if (data) {
-        const dbList: WatchProgress[] = (data as any[]).map(d => ({
+        const dbList: WatchProgress[] = (data as any[]).map((d: any) => ({
           movieId: d.movie_id,
           episodeId: d.episode_id || undefined,
           mediaType: (d.media_type as 'movie' | 'series') || 'movie',
-          currentTime: d.current_time_sec,
-          duration: d.duration_sec,
+          currentTime: Number(d.current_time_sec),
+          duration: Number(d.duration_sec),
           lastWatched: new Date(d.last_watched).getTime(),
         }));
         setProgressList(dbList);
@@ -80,31 +80,38 @@ setProgressList((prev) => {
 
     // Debounced DB sync
     if (user) {
-      if (debounceRef.current[movieId]) clearTimeout(debounceRef.current[movieId]);
-      debounceRef.current[movieId] = setTimeout(async () => {
+      const debounceKey = `${movieId}_${episodeId || ''}`;
+      if (debounceRef.current[debounceKey]) clearTimeout(debounceRef.current[debounceKey]);
+      debounceRef.current[debounceKey] = setTimeout(async () => {
         const percent = currentTime / duration;
+        const episodeVal = episodeId || '';
         if (percent > 0.95 || currentTime < 5) {
-  const query = supabase.from("watch_progress").delete().eq("user_id", user.id).eq("movie_id", movieId);
-  if (episodeId) query.eq("episode_id", episodeId);
-  await query;
-} else {
-       await (supabase.from("watch_progress") as any).upsert({
-  user_id: user.id,
-  movie_id: movieId,
-  episode_id: episodeId || null,
-  current_time_sec: Math.round(currentTime),
-  duration_sec: Math.round(duration),
-  media_type: mediaType,
-  last_watched: new Date().toISOString(),
-}, { 
-   onConflict: "user_id,movie_id,episode_id"
-});
+          await (supabase.from("watch_progress") as any)
+            .delete()
+            .eq("user_id", user.id)
+            .eq("movie_id", movieId)
+            .eq("episode_id", episodeVal);
+        } else {
+          await (supabase.from("watch_progress") as any).upsert({
+            user_id: user.id,
+            movie_id: movieId,
+            episode_id: episodeVal,
+            current_time_sec: Math.round(currentTime),
+            duration_sec: Math.round(duration),
+            media_type: mediaType,
+            last_watched: new Date().toISOString(),
+          }, { 
+            onConflict: "watch_progress_user_movie_episode_idx"
+          });
         }
       }, 3000);
     }
   }, [user]);
 
-  const getProgress = useCallback((movieId: string): WatchProgress | undefined => {
+  const getProgress = useCallback((movieId: string, episodeId?: string): WatchProgress | undefined => {
+    if (episodeId) {
+      return progressList.find((p) => p.movieId === movieId && p.episodeId === episodeId);
+    }
     return progressList.find((p) => p.movieId === movieId);
   }, [progressList]);
 
@@ -112,10 +119,17 @@ setProgressList((prev) => {
     return [...progressList].sort((a, b) => b.lastWatched - a.lastWatched).slice(0, 10);
   }, [progressList]);
 
-  const clearProgress = useCallback(async (movieId: string) => {
-    setProgressList((prev) => prev.filter((p) => p.movieId !== movieId));
+  const clearProgress = useCallback(async (movieId: string, episodeId?: string) => {
+    setProgressList((prev) => prev.filter((p) => 
+      !(p.movieId === movieId && (!episodeId || p.episodeId === episodeId))
+    ));
     if (user) {
-      await supabase.from("watch_progress").delete().eq("user_id", user.id).eq("movie_id", movieId);
+      const episodeVal = episodeId || '';
+      await (supabase.from("watch_progress") as any)
+        .delete()
+        .eq("user_id", user.id)
+        .eq("movie_id", movieId)
+        .eq("episode_id", episodeVal);
     }
   }, [user]);
 

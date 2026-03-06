@@ -8,6 +8,8 @@ export interface WatchProgress {
   mediaType?: 'movie' | 'series'; 
   currentTime: number;
   duration: number;
+  seasonNumber?: number;
+  episodeNumber?: number;
   lastWatched: number;
 }
 
@@ -32,7 +34,7 @@ export function useWatchProgress() {
   const fetchProgress = async () => {
       const { data } = await supabase
         .from("watch_progress")
-        .select("movie_id, episode_id, media_type, current_time_sec, duration_sec, last_watched")
+        .select("movie_id, episode_id, media_type, current_time_sec, duration_sec, last_watched, season_number, episode_number")
         .eq("user_id", user.id);
 
       if (data) {
@@ -42,6 +44,8 @@ export function useWatchProgress() {
           mediaType: (d.media_type as 'movie' | 'series') || 'movie',
           currentTime: Number(d.current_time_sec),
           duration: Number(d.duration_sec),
+          seasonNumber: item.season_number, // Added this line
+          episodeNumber: item.episode_number, // Added this line
           lastWatched: new Date(d.last_watched).getTime(),
         }));
         setProgressList(dbList);

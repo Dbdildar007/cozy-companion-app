@@ -182,7 +182,7 @@ export default function Index() {
             onRate={setRating}
             isInWatchlist={isInWatchlist}
             onToggleWatchlist={toggleWatchlist}
-            showRemoveButton
+            showRemoveButton={true}
           />
         )}
 

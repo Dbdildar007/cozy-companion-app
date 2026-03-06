@@ -54,12 +54,15 @@ export default function ContinueWatchingRow({ movies, onWatch, onWatchSeries, on
                 transition={{ duration: 0.2 }}
                 className="relative flex-shrink-0 w-[200px] md:w-[260px] cursor-pointer group/card"
                 onClick={() => {
-                  if (movie.isSeries && progress.mediaType === 'series' && onWatchSeries) {
-                    onWatchSeries(movie, progress);
-                  } else {
-                    onWatch(movie);
-                  }
-                }}
+  // Use 'mediaType' from progress as the source of truth
+  const isSeries = movie.isSeries || progress.mediaType === 'series';
+  
+  if (isSeries && onWatchSeries) {
+    onWatchSeries(movie, progress);
+  } else {
+    onWatch(movie);
+  }
+}}
               >
                 <div className="relative rounded-md overflow-hidden aspect-video bg-secondary">
                   <img

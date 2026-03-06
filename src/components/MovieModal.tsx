@@ -67,7 +67,7 @@ export default function MovieModal({
           >
             {/* Header image */}
             <div className="relative aspect-video">
-              <img src={movie.heroImage || movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+              <img src={movie.heroImage || movie.poster} alt={movie.title} className="w-full h-full object-cover object-center" />
               <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
               <button
                 onClick={onClose}

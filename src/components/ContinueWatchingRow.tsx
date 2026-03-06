@@ -103,14 +103,14 @@ export default function ContinueWatchingRow({ movies, onWatch, onWatchSeries, on
                 <div className="mt-2 flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="text-xs md:text-sm font-medium text-foreground truncate">{movie.title}</h3>
-                    {progress.mediaType === 'series' && progress.episodeId && (
-                      <p className="text-[10px] text-muted-foreground truncate">
-                        {(() => {
-                          const epId = progress.episodeId;
-                          return `Episode continuing...`;
-                        })()}
-                      </p>
-                    )}
+                    {/* For Series: Show Season and Episode. For Movies: Show Resume text. */}
+<p className="text-[10px] md:text-xs text-muted-foreground truncate font-medium">
+  {progress.mediaType === 'series' || progress.mediaType === 'tv_show' 
+    ? (progress.seasonNumber && progress.episodeNumber 
+        ? `S${progress.seasonNumber} : E${progress.episodeNumber}` 
+        : `Continue episode`)
+    : 'Resume Movie'}
+</p>
                   </div>
                   <span className="text-[10px] md:text-xs text-muted-foreground whitespace-nowrap">{remainMin}m left</span>
                 </div>

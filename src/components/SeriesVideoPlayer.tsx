@@ -54,18 +54,29 @@ export default function SeriesVideoPlayer({
   const handleTimeUpdate = useCallback(() => {
     const v = videoRef.current;
     if (!v || isSeeking) return;
+    
     setCurrentTime(v.currentTime);
+    
     if (v.buffered.length > 0) {
       setBuffered(v.buffered.end(v.buffered.length - 1));
     }
-    if (
-      series?.id &&
-      currentEpisode?.id &&
-      v.duration > 0 &&
-      (Math.abs(v.currentTime - lastSavedTimeRef.current) > 5 || v.ended)
-    ) {
-      lastSavedTimeRef.current = v.currentTime;
-      updateProgress(series.id, v.currentTime, v.duration, 'series', currentEpisode.id);
+
+    // Check if we have the IDs needed
+    if (series?.id && currentEpisode?.id && v.duration > 0) {
+      // 1. We still use lastSavedTimeRef to avoid spamming the DATABASE...
+      if (Math.abs(v.currentTime - lastSavedTimeRef.current) > 5 || v.ended) {
+        lastSavedTimeRef.current = v.currentTime;
+        
+        // 2. But updateProgress now updates the LOCAL UI instantly 
+        // because of the changes we made to the hook!
+        updateProgress(
+          series.id, 
+          v.currentTime, 
+          v.duration, 
+          'series', 
+          currentEpisode.id
+        );
+      }
     }
   }, [series?.id, currentEpisode?.id, isSeeking, updateProgress]);
 

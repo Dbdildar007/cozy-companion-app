@@ -69,13 +69,15 @@ export default function SeriesVideoPlayer({
         
         // 2. But updateProgress now updates the LOCAL UI instantly 
         // because of the changes we made to the hook!
-        updateProgress(
-          series.id, 
-          v.currentTime, 
-          v.duration, 
-          'series', 
-          currentEpisode.id
-        );
+       updateProgress(
+  series.id, 
+  v.currentTime, 
+  v.duration, 
+  'tv_show', // Match your table constraint ('movie' or 'tv_show')
+  currentEpisode.id,
+  selectedSeason,        // Pass season number
+  currentEpisode.number  // Pass episode number
+);
       }
     }
   }, [series?.id, currentEpisode?.id, isSeeking, updateProgress]);

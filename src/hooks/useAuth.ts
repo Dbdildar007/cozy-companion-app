@@ -53,11 +53,15 @@ useEffect(() => {
       setUser(currentUser);
       
       // Whenever a user successfully signs in or a session is restored
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && currentUser) {
-        await syncDeviceInfo(currentUser.id);
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        if (currentUser) {
+          // REMOVED 'await' here so it doesn't block the UI
+          syncDeviceInfo(currentUser.id); 
+        }
+        setLoading(false);
+      } else {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {

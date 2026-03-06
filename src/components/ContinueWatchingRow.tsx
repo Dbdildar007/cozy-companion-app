@@ -86,7 +86,7 @@ export default function ContinueWatchingRow({ movies, onWatch, onWatchSeries, on
                   {/* Remove button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); onRemove(movie.id); }}
-                    className="absolute top-2 right-2 p-1 rounded-full bg-background/70 hover:bg-background opacity-0 group-hover/card:opacity-100 transition-opacity z-10"
+                    className="absolute top-2 right-2 p-1 rounded-full bg-background/70 hover:bg-background opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity z-10"
                   >
                     <X className="w-3.5 h-3.5 text-foreground" />
                   </button>

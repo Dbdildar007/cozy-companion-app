@@ -30,7 +30,7 @@ export default function MovieCard({ movie, onSelect, onDownload, downloadState, 
         <img
           src={movie.poster}
           alt={movie.title}
-          className="w-full h-full object-cover group-hover:brightness-95 transition" 
+          className="w-full h-full object-contain bg-slate-900 group-hover:brightness-95 transition" 
           loading="lazy"
         />
 

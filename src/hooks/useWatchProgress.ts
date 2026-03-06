@@ -56,42 +56,48 @@ export function useWatchProgress() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progressList));
   }, [progressList]);
 
-  const updateProgress = useCallback((movieId: string, currentTime: number, duration: number,mediaType: 'movie' | 'series' = 'movie',
-  episodeId?: string) => {
+ const updateProgress = useCallback((movieId: string, currentTime: number, duration: number, mediaType: 'movie' | 'series' = 'movie', episodeId?: string) => {
     if (duration <= 0) return;
-setProgressList((prev) => {
-  // Filter out ONLY the specific item being updated (match both ID and episode)
-  const filtered = prev.filter((p) => 
-    !(p.movieId === movieId && p.episodeId === episodeId)
-  );
-  
-  const percent = currentTime / duration;
-  if (currentTime < 5 || percent > 0.95) return filtered;
 
-  return [{ 
-    movieId, 
-    episodeId, 
-    mediaType, 
-    currentTime, 
-    duration, 
-    lastWatched: Date.now() 
-  }, ...filtered];
-});
+    // 1. IMMEDIATE LOCAL UPDATE (Optimistic UI)
+    const newItem: WatchProgress = { 
+      movieId, 
+      episodeId, 
+      mediaType, 
+      currentTime, 
+      duration, 
+      lastWatched: Date.now() 
+    };
 
-    // Debounced DB sync
+    setProgressList((prev) => {
+      // Filter out the old version of this specific item/episode
+      const filtered = prev.filter((p) => !(p.movieId === movieId && p.episodeId === episodeId));
+      
+      const percent = currentTime / duration;
+      // If watched less than 5s or more than 95%, we don't show it in "Continue Watching"
+      if (currentTime < 5 || percent > 0.95) return filtered;
+      
+      // Add the new progress to the top of the list immediately
+      return [newItem, ...filtered];
+    });
+
+    // 2. FASTER DB SYNC (Reduced from 3s to 1s)
     if (user) {
       const debounceKey = `${movieId}_${episodeId || ''}`;
       if (debounceRef.current[debounceKey]) clearTimeout(debounceRef.current[debounceKey]);
+      
       debounceRef.current[debounceKey] = setTimeout(async () => {
         const percent = currentTime / duration;
         const episodeVal = episodeId || '';
-        // Always delete first, then insert if needed (expression index prevents simple upsert)
+
+        // Clean up old entry
         await (supabase.from("watch_progress") as any)
           .delete()
           .eq("user_id", user.id)
           .eq("movie_id", movieId)
           .eq("episode_id", episodeVal);
 
+        // Insert fresh progress if within 5% - 95% range
         if (percent <= 0.95 && currentTime >= 5) {
           await (supabase.from("watch_progress") as any).insert({
             user_id: user.id,
@@ -103,9 +109,10 @@ setProgressList((prev) => {
             last_watched: new Date().toISOString(),
           });
         }
-      }, 1000);
+      }, 1000); // Syncs to database after 1 second of pause
     }
   }, [user]);
+  
 
   const getProgress = useCallback((movieId: string, episodeId?: string): WatchProgress | undefined => {
     if (episodeId) {

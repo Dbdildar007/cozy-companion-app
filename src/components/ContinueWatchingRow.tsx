@@ -46,22 +46,20 @@ export default function ContinueWatchingRow({ movies, onWatch, onWatchSeries, on
           {movies.map(({ progress, ...movie }) => {
             const percent = progress.duration > 0 ? (progress.currentTime / progress.duration) * 100 : 0;
             const remainMin = Math.ceil((progress.duration - progress.currentTime) / 60);
+            return (
+              <motion.div
+                key={movie.id}
+                className="relative flex-shrink-0 w-[200px] md:w-[260px] cursor-pointer group/card"
+                onClick={() => {
+                  // Use 'mediaType' from progress as the source of truth
+                  const isSeries = movie.isSeries || progress.mediaType === 'series';
 
-            return (
-            return (
-  <div 
-    key={movie.id} 
-    className="relative flex-shrink-0 w-[200px] md:w-[260px] cursor-pointer group/card"
-    onClick={() => {
-  // Use 'mediaType' from progress as the source of truth
-  const isSeries = movie.isSeries || progress.mediaType === 'series';
-  
-  if (isSeries && onWatchSeries) {
-    onWatchSeries(movie, progress);
-  } else {
-    onWatch(movie);
-  }
-}}
+                  if (isSeries && onWatchSeries) {
+                    onWatchSeries(movie, progress);
+                  } else {
+                    onWatch(movie);
+                  }
+                }}
               >
                 <div className="relative rounded-md overflow-hidden aspect-video bg-secondary">
                   <img
@@ -103,13 +101,13 @@ export default function ContinueWatchingRow({ movies, onWatch, onWatchSeries, on
                   <div className="min-w-0">
                     <h3 className="text-xs md:text-sm font-medium text-foreground truncate">{movie.title}</h3>
                     {/* For Series: Show Season and Episode. For Movies: Show Resume text. */}
-<p className="text-[10px] md:text-xs text-muted-foreground truncate font-medium">
-  {progress.mediaType === 'series' || progress.mediaType === 'tv_show' 
-    ? (progress.seasonNumber && progress.episodeNumber 
-        ? `S${progress.seasonNumber} : E${progress.episodeNumber}` 
-        : `Continue episode`)
-    : 'Resume Movie'}
-</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate font-medium">
+                      {progress.mediaType === 'series' || progress.mediaType === 'tv_show'
+                        ? (progress.seasonNumber && progress.episodeNumber
+                          ? `S${progress.seasonNumber} : E${progress.episodeNumber}`
+                          : `Continue episode`)
+                        : 'Resume Movie'}
+                    </p>
                   </div>
                   <span className="text-[10px] md:text-xs text-muted-foreground whitespace-nowrap">{remainMin}m left</span>
                 </div>

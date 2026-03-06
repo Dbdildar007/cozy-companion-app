@@ -134,19 +134,35 @@ export function useWatchProgress() {
     return [...progressList].sort((a, b) => b.lastWatched - a.lastWatched).slice(0, 10);
   }, [progressList]);
 
-  const clearProgress = useCallback(async (movieId: string, episodeId?: string) => {
-    setProgressList((prev) => prev.filter((p) => 
-      !(p.movieId === movieId && (!episodeId || p.episodeId === episodeId))
-    ));
-    if (user) {
-      const episodeVal = episodeId || '';
-      await (supabase.from("watch_progress") as any)
-        .delete()
-        .eq("user_id", user.id)
-        .eq("movie_id", movieId)
-        .eq("episode_id", episodeVal);
+const clearProgress = useCallback(async (movieId: string, episodeId?: string) => {
+  // Update local state first
+  setProgressList((prev) =>
+    prev.filter((p) => {
+      // If we have an episodeId, only remove that specific episode
+      if (episodeId) {
+        return !(p.movieId === movieId && p.episodeId === episodeId);
+      } 
+      // If no episodeId (Series level delete), remove EVERYTHING for this series ID
+      return p.movieId !== movieId;
+    })
+  );
+
+  if (user) {
+    // Delete from Supabase
+    let query = supabase.from("watch_progress")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("movie_id", movieId);
+
+    // Only add the episode filter if we are deleting a single episode
+    if (episodeId) {
+      query = query.eq("episode_id", episodeId);
     }
-  }, [user]);
+    
+    const { error } = await query;
+    if (error) console.error("Error deleting progress:", error);
+  }
+}, [user, supabase]);
 
   return { updateProgress, getProgress, getContinueWatching, clearProgress };
 }

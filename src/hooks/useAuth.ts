@@ -5,7 +5,7 @@ import type { User, Session } from "@supabase/supabase-js";
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!supabase.auth.getSession());
 
 
   // 1. ADD THIS HELPER FUNCTION INSIDE useAuth
@@ -46,33 +46,33 @@ export function useAuth() {
   };
 
 useEffect(() => {
-    // 3. UPDATE THE onAuthStateChange LISTENER
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      // Whenever a user successfully signs in or a session is restored
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        if (currentUser) {
-          // REMOVED 'await' here so it doesn't block the UI
-          syncDeviceInfo(currentUser.id); 
-        }
-        setLoading(false);
-      } else {
-        setLoading(false);
-      }
-    });
+  // 1. Immediately check for an existing session (Fastest)
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setSession(session);
+    setUser(session?.user ?? null);
+    setLoading(false); // UI shows up immediately here
+    
+    if (session?.user) {
+      syncDeviceInfo(session.user.id);
+    }
+  });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+  // 2. Listen for future changes (Login/Logout)
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    setSession(session);
+    const currentUser = session?.user ?? null;
+    setUser(currentUser);
+    
+    if (event === "SIGNED_IN" && currentUser) {
+      syncDeviceInfo(currentUser.id);
+    }
+    
+    // Safety check to ensure loading is off
+    setLoading(false);
+  });
 
-    return () => subscription.unsubscribe();
-  }, []);
-  
+  return () => subscription.unsubscribe();
+}, []);
 
   const signUp = async (email: string, password: string, displayName: string) => {
     const { data, error } = await supabase.auth.signUp({

@@ -30,7 +30,8 @@ export function useAuth() {
       os,
       device: /Mobi|Android/i.test(ua) ? "mobile" : "desktop",
       raw_ua: ua,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      last_login: new Date().toLocaleString()
     };
   };
 
@@ -86,14 +87,40 @@ useEffect(() => {
     return { data, error };
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    return { data, error };
-  };
+  const signIn = async (email: string, password: string, force = false) => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  
+  if (error || !data.user) return { data, error };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  // Fetch the current profile to check for other devices
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('device_info')
+    .eq('user_id', data.user.id)
+    .single();
+
+  // Logic: If a device is already there and it's not THIS one
+  if (profile?.device_info && !force) {
+    if (profile.device_info.raw_ua !== navigator.userAgent) {
+      await supabase.auth.signOut(); // Logout the new attempt immediately
+      return { 
+        data: null, 
+        error: { message: "ALREADY_LOGGED_IN" }, 
+        existingDevice: profile.device_info 
+      };
+    }
+  }
+
+  return { data, error: null };
+};
+
+ const signOut = async () => {
+  if (user) {
+    // Clear device_info so the slot is free
+    await supabase.from("profiles").update({ device_info: null }).eq("user_id", user.id);
+  }
+  await supabase.auth.signOut();
+};
 
   return { user, session, loading, signUp, signIn, signOut };
 }

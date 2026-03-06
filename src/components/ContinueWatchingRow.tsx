@@ -48,12 +48,11 @@ export default function ContinueWatchingRow({ movies, onWatch, onWatchSeries, on
             const remainMin = Math.ceil((progress.duration - progress.currentTime) / 60);
 
             return (
-              <motion.div
-                key={movie.id}
-                whileHover={{ scale: 1.05, zIndex: 10 }}
-                transition={{ duration: 0.2 }}
-                className="relative flex-shrink-0 w-[200px] md:w-[260px] cursor-pointer group/card"
-                onClick={() => {
+            return (
+  <div 
+    key={movie.id} 
+    className="relative flex-shrink-0 w-[200px] md:w-[260px] cursor-pointer group/card"
+    onClick={() => {
   // Use 'mediaType' from progress as the source of truth
   const isSeries = movie.isSeries || progress.mediaType === 'series';
   

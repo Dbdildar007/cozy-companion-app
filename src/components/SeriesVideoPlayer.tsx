@@ -27,7 +27,7 @@ export default function SeriesVideoPlayer({
   const lastSavedTimeRef = useRef<number>(0);
 
   const { series: seriesDetail } = useSeriesDetail(series.id);
-  const { updateProgress } = useWatchProgress();
+  const { updateProgress, getProgress } = useWatchProgress();
 
   const [currentEpisode, setCurrentEpisode] = useState<SeriesEpisode>(initialEpisode);
   const [selectedSeason, setSelectedSeason] = useState(initialSeason);
@@ -73,6 +73,11 @@ export default function SeriesVideoPlayer({
     const v = videoRef.current;
     if (!v) return;
     setDuration(v.duration);
+    // Resume from saved progress
+    const saved = getProgress(series.id, currentEpisode.id);
+    if (saved && saved.currentTime > 5 && saved.currentTime / v.duration < 0.95) {
+      v.currentTime = saved.currentTime;
+    }
   };
 
   const getNextEpisode = useCallback((): SeriesEpisode | null => {

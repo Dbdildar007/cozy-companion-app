@@ -11,7 +11,7 @@ import SeriesVideoPlayer from "@/components/SeriesVideoPlayer";
 import { type Movie } from "@/services/movieService";
 import { useDownloads } from "@/hooks/useDownloads";
 import { useRatings } from "@/hooks/useRatings";
-import { useWatchProgress } from "@/hooks/useWatchProgress";
+import { useWatchProgress, type WatchProgress } from "@/hooks/useWatchProgress";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useWatchParty } from "@/hooks/useWatchParty";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,7 +22,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "sonner";
 import { useMovies } from '@/hooks/useMovies';
 import type { Series, SeriesEpisode } from '@/services/seriesService';
-
+import { seriesService } from '@/services/seriesService';
 export default function Index() {
   const { user } = useAuth();
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -120,6 +120,26 @@ export default function Index() {
     setPlayingSeries({ series, episode, season });
   };
 
+  const handleContinueWatchSeries = useCallback(async (movie: Movie, progress: WatchProgress) => {
+    if (!progress.episodeId) {
+      // No episode ID, open series modal
+      setSelectedSeries(movieToSeries(movie));
+      return;
+    }
+    // Fetch series details to find the episode
+    const detail = await seriesService.getSeriesWithSeasons(movie.id);
+    if (!detail) return;
+    for (const season of detail.seasons) {
+      const episode = season.episodes.find(e => e.id === progress.episodeId);
+      if (episode) {
+        setPlayingSeries({ series: movieToSeries(movie), episode, season: season.number });
+        return;
+      }
+    }
+    // Fallback: open modal
+    setSelectedSeries(movieToSeries(movie));
+  }, [movieToSeries]);
+
   if (initialLoad || loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -145,6 +165,7 @@ export default function Index() {
         <ContinueWatchingRow
           movies={continueWatchingMovies}
           onWatch={handleWatch}
+          onWatchSeries={handleContinueWatchSeries}
           onRemove={clearProgress}
         />
 

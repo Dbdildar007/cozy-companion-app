@@ -7,10 +7,11 @@ import type { WatchProgress } from "@/hooks/useWatchProgress";
 interface ContinueWatchingRowProps {
   movies: (Movie & { progress: WatchProgress })[];
   onWatch: (movie: Movie) => void;
+  onWatchSeries?: (movie: Movie, progress: WatchProgress) => void;
   onRemove: (movieId: string) => void;
 }
 
-export default function ContinueWatchingRow({ movies, onWatch, onRemove }: ContinueWatchingRowProps) {
+export default function ContinueWatchingRow({ movies, onWatch, onWatchSeries, onRemove }: ContinueWatchingRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -52,7 +53,13 @@ export default function ContinueWatchingRow({ movies, onWatch, onRemove }: Conti
                 whileHover={{ scale: 1.05, zIndex: 10 }}
                 transition={{ duration: 0.2 }}
                 className="relative flex-shrink-0 w-[200px] md:w-[260px] cursor-pointer group/card"
-                onClick={() => onWatch(movie)}
+                onClick={() => {
+                  if (movie.isSeries && progress.mediaType === 'series' && onWatchSeries) {
+                    onWatchSeries(movie, progress);
+                  } else {
+                    onWatch(movie);
+                  }
+                }}
               >
                 <div className="relative rounded-md overflow-hidden aspect-video bg-secondary">
                   <img
@@ -63,6 +70,12 @@ export default function ContinueWatchingRow({ movies, onWatch, onRemove }: Conti
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
 
+                  {/* Series badge */}
+                  {movie.isSeries && (
+                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary/90 text-primary-foreground uppercase tracking-wider">
+                      Series
+                    </span>
+                  )}
                   {/* Play icon center */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity">
                     <div className="p-3 rounded-full bg-primary/90">
@@ -85,7 +98,17 @@ export default function ContinueWatchingRow({ movies, onWatch, onRemove }: Conti
                 </div>
 
                 <div className="mt-2 flex items-start justify-between gap-2">
-                  <h3 className="text-xs md:text-sm font-medium text-foreground truncate">{movie.title}</h3>
+                  <div className="min-w-0">
+                    <h3 className="text-xs md:text-sm font-medium text-foreground truncate">{movie.title}</h3>
+                    {progress.mediaType === 'series' && progress.episodeId && (
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {(() => {
+                          const epId = progress.episodeId;
+                          return `Episode continuing...`;
+                        })()}
+                      </p>
+                    )}
+                  </div>
                   <span className="text-[10px] md:text-xs text-muted-foreground whitespace-nowrap">{remainMin}m left</span>
                 </div>
               </motion.div>

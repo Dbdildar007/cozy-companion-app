@@ -56,14 +56,13 @@ export default function ProfilePage() {
   ];
 
 const handleSignOut = async () => {
-  console.log("Before logout - Profile in cache:", localStorage.getItem('user_profile'));
   await signOut();
   setProfile(null); // Add this to clear the UI immediately
   localStorage.removeItem('user_profile');
   console.log("After logout - Profile in cache:", localStorage.getItem('user_profile'));
   
-  toast.success("Logged out from this device");
-  navigate("/");
+  toast.success("Signed out successfully");
+  navigate("/auth");
 };
 
   const copyUniqueId = () => {

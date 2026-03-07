@@ -83,7 +83,7 @@ export default function AuthPage() {
       const res = await signIn(email, password);
       
       // 2. Check if a device limit was reached
-      if (res.error?.message === "ALREADY_LOGGED_IN") {
+      if (res.isLimited) {
         setActiveDevice(res.existingDevice);
         setShowLimitModal(true);
         setLoading(false);

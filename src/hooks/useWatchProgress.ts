@@ -32,8 +32,8 @@ export function useWatchProgress() {
   useEffect(() => {
     if (!user) return;
   const fetchProgress = async () => {
-      const { data } = await supabase
-        .from("watch_progress")
+      const { data } = await (supabase
+        .from("watch_progress") as any)
         .select("movie_id, episode_id, media_type, current_time_sec, duration_sec, last_watched, season_number, episode_number")
         .eq("user_id", user.id);
 
@@ -44,8 +44,8 @@ export function useWatchProgress() {
           mediaType: (d.media_type as 'movie' | 'series') || 'movie',
           currentTime: Number(d.current_time_sec),
           duration: Number(d.duration_sec),
-          seasonNumber: item.season_number, // Added this line
-          episodeNumber: item.episode_number, // Added this line
+          seasonNumber: d.season_number,
+          episodeNumber: d.episode_number,
           lastWatched: new Date(d.last_watched).getTime(),
         }));
         setProgressList(dbList);
@@ -114,7 +114,7 @@ export function useWatchProgress() {
             episode_number: episodeNumber, 
             current_time_sec: Math.round(currentTime),
             duration_sec: Math.round(duration),
-            media_type: mediaType === 'series' ? 'tv_show' : 'movie',
+            media_type: mediaType,
             last_watched: new Date().toISOString(),
           });
         }

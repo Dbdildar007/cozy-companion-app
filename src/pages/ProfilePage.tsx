@@ -16,10 +16,11 @@ export default function ProfilePage() {
   const { ratings } = useRatings();
   const { getContinueWatching } = useWatchProgress();
 
-  const [profile, setProfile] = useState<{ display_name: string; unique_id: string } | null>(() => {
-    const saved = localStorage.getItem('user_profile');
-    return saved ? JSON.parse(saved) : null;
-  });
+const [profile, setProfile] = useState<{ display_name: string; unique_id: string } | null>(() => {
+  // This runs instantly on page load
+  const saved = localStorage.getItem('user_profile');
+  return saved ? JSON.parse(saved) : null;
+});
 
   // Change password state
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -30,16 +31,54 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setProfile(null);
+      localStorage.removeItem('user_profile');
+      return;
+    }
+
+    // 1. Initial Fetch
     supabase
       .from("profiles")
       .select("display_name, unique_id")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        if (data) setProfile(data);
-        localStorage.setItem('user_profile', JSON.stringify(data));
+        if (data) {
+          setProfile(data);
+          localStorage.setItem('user_profile', JSON.stringify(data));
+        }
       });
+
+    // 2. Realtime Listener (The "Ghost Fix")
+    const channel = supabase
+      .channel(`profile-changes-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // If device_info changed to something else, wipe the UI
+          const newDevice = payload.new.device_info;
+          if (newDevice && newDevice.raw_ua !== navigator.userAgent) {
+            setProfile(null);
+            localStorage.clear();
+            sessionStorage.clear();
+            localStorage.removeItem('user_profile');
+            window.location.href = "/auth?reason=session_expired";
+            // Optional: toast.error("Logged out from another device");
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const historyCount = getContinueWatching().length;
@@ -53,11 +92,19 @@ export default function ProfilePage() {
     { icon: Settings, label: "Settings", count: null, action: () => navigate("/settings") },
   ];
 
-  const handleSignOut = async () => {
+const handleSignOut = async () => {
+    // 1. Run the base sign out logic (clears Supabase session)
     await signOut();
-    localStorage.removeItem('user_profile');
-    toast.success("Signed out");
-    navigate("/");
+    
+    // 2. Wipe ALL local storage (including 'user_profile' and movie caches)
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    toast.success("Signed out successfully");
+
+    // 3. FORCE a full page reload to the auth page.
+    // This is the "Magic Fix" that kills all "Ghost" data in React state.
+    window.location.href = "/auth";
   };
 
   const copyUniqueId = () => {

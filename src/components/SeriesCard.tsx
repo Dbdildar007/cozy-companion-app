@@ -70,29 +70,29 @@ export default function SeriesCard({
           </p>
           
           {onRate && (
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-        <button
-  onClick={(e) => {
-    e.stopPropagation();
-    onToggleWatchlist(movie.id);
-  }}
-  // Added 'py-2' to make the hit-box larger for thumbs on mobile
-  className={`mt-2 py-2 flex items-center gap-1 text-xs font-medium transition-colors ${
-    isInWatchlist ? "text-primary" : "text-foreground"
-  }`}
->
-                  <Star
-                    className={`w-3 h-3 transition-colors ${
-                      star <= userRating
-                        ? "text-cine-gold fill-cine-gold"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
+  <div className="flex items-center gap-0.5">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={star}
+        onClick={(e) => {
+          e.stopPropagation();
+          // FIX 1: Use onRate instead of onToggleWatchlist
+          // FIX 2: Use series.id instead of movie.id
+          if (onRate) onRate(series.id, star);
+        }}
+        // FIX 3: Add p-1 -m-1 for touch hitbox, remove watchlist-specific styles
+        className="p-1 -m-1 mt-1 transition-colors"
+      >
+        <Star
+          className={`w-3 h-3 transition-colors ${
+            star <= userRating ? "text-cine-gold fill-cine-gold" : "text-muted-foreground"
+          }`}
+        />
+      </button>
+    ))}
+  </div>
+)}
+              
 
           {onToggleWatchlist && (
             <button

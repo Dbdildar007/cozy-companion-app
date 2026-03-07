@@ -70,44 +70,36 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event,
   };
 
  const signIn = async (email: string, password: string) => {
-    // 1. First, just do the auth check
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (error || !data.user || !data.session) return { data, error };
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.user || !data.session) return { data, error };
 
-    // 2. Fetch profile to check if someone else is already in
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('active_session_id, device_info')
-      .eq('user_id', data.user.id)
-      .single();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('active_session_id, device_info')
+    .eq('user_id', data.user.id)
+    .single();
 
-    const myInfo = await getDeviceInfo();
+  const myInfo = await getDeviceInfo();
 
-    // 3. If there's an active session on a DIFFERENT device
-    if (profile?.active_session_id && profile.device_info?.deviceId !== myInfo.deviceId) {
-      // We return a custom flag so the UI knows to show the Modal
-      return { 
-        data, 
-        error: null, 
-        conflict: true, 
-        existingDevice: profile.device_info 
-      };
-    }
+  if (profile?.active_session_id && profile.device_info?.deviceId !== myInfo.deviceId) {
+    return { data, error: null, conflict: true, existingDevice: profile.device_info };
+  }
 
-   const newSessionId = crypto.randomUUID();
-   
+  const newSessionId = crypto.randomUUID();
 
-    // 4. No conflict? Update the DB immediately
-    await supabase.rpc('handle_single_device_login', {
-      target_user_id: data.user.id,
-      new_session_id: newSessionId,
-      new_device_info: myInfo
-    });
+  // Add error handling to the RPC call to see if it's failing
+  const { error: rpcError } = await supabase.rpc('handle_single_device_login', {
+    target_user_id: data.user.id,
+    new_session_id: newSessionId,
+    new_device_info: myInfo
+  });
+console.log("errr",rpcError);
+  if (rpcError) {
+    console.error("RPC failed:", rpcError.message);
+  }
 
-    return { data, error: null, conflict: false, sessionId: newSessionId };
-  };
-
+  return { data, error: null, conflict: false, sessionId: newSessionId };
+};
  const signOut = async () => {
   if (user) {
     // Clear device_info so the slot is free

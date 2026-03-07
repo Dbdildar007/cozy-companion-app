@@ -118,7 +118,7 @@ const signIn = async (email: string, password: string, force = false) => {
     .from('profiles')
     .update({ 
       active_session_id: newSessionId,
-      device_info: getSimpleDeviceInfo()
+      device_info: { raw_ua: navigator.userAgent, last_login: new Date().toISOString() } 
     })
     .eq('user_id', data.user.id);
 
@@ -126,17 +126,11 @@ const signIn = async (email: string, password: string, force = false) => {
 };
  
 
-const signOut = async () => {
+ const signOut = async () => {
   if (user) {
-    await supabase
-      .from("profiles")
-      .update({ 
-        device_info: null, 
-        active_session_id: null // Clear this too!
-      })
-      .eq("user_id", user.id);
+    // Clear device_info so the slot is free
+    await supabase.from("profiles").update({ device_info: null }).eq("user_id", user.id);
   }
-  localStorage.removeItem("current_session_id"); // Clean up local storage
   await supabase.auth.signOut();
 };
 

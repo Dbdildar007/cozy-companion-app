@@ -126,7 +126,7 @@ export default function SeriesModal({ series, onClose, onPlayEpisode, userRating
 
               {/* Star rating - matches MovieModal */}
               <div className="mb-6">
-                <p className="text-xs text-muted-foreground mb-2">Your Rating</p>
+                <p className="text-xs text-muted-foreground mb-2">Rating it</p>
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button key={star} onClick={() => onRate?.(series.id, star)}>

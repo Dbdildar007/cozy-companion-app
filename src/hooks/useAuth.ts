@@ -65,7 +65,7 @@ useEffect(() => {
     setUser(currentUser);
     
     if (event === "SIGNED_IN" && currentUser) {
-      //syncDeviceInfo(currentUser.id);
+      syncDeviceInfo(currentUser.id);
     }
     
     // Safety check to ensure loading is off
@@ -99,26 +99,28 @@ const signIn = async (email: string, password: string, force = false) => {
     .single();
 
   // 2. If a session exists and we aren't "forcing" a login, block it
-if (profile?.active_session_id && !force) {
-    // We must sign out the temporary session immediately so it doesn't stay active
-    await supabase.auth.signOut(); 
-    return { data: null, error: { message: "ALREADY_LOGGED_IN" } };
+  if (profile?.active_session_id && !force) {
+    await supabase.auth.signOut(); // Terminate the temporary session
+    return { 
+      data: null, 
+      error: { message: "ALREADY_LOGGED_IN" } 
+    };
   }
 
-  
+  // 3. If we are forcing (or it's a fresh login), generate a NEW ID
   const newSessionId = crypto.randomUUID();
+  
+  // Save to local browser storage so this device knows its ID
   localStorage.setItem("current_session_id", newSessionId);
 
-  // Update the database with BOTH the new session ID and device info
-  const { error: updateError } = await supabase
+  // Update DB: This change will be broadcast to Device 1
+  await supabase
     .from('profiles')
     .update({ 
       active_session_id: newSessionId,
-      device_info: getSimpleDeviceInfo() 
+      device_info: getSimpleDeviceInfo()
     })
     .eq('user_id', data.user.id);
-
-  if (updateError) console.error("Update error:", updateError);
 
   return { data, error: null };
 };

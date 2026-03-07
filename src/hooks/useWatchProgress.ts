@@ -44,8 +44,8 @@ export function useWatchProgress() {
           mediaType: (d.media_type as 'movie' | 'series') || 'movie',
           currentTime: Number(d.current_time_sec),
           duration: Number(d.duration_sec),
-          seasonNumber: item.season_number, // Added this line
-          episodeNumber: item.episode_number, // Added this line
+          seasonNumber: d.season_number,
+          episodeNumber: d.episode_number,
           lastWatched: new Date(d.last_watched).getTime(),
         }));
         setProgressList(dbList);

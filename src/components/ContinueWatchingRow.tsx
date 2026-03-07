@@ -102,7 +102,7 @@ export default function ContinueWatchingRow({ movies, onWatch, onWatchSeries, on
                     <h3 className="text-xs md:text-sm font-medium text-foreground truncate">{movie.title}</h3>
                     {/* For Series: Show Season and Episode. For Movies: Show Resume text. */}
                     <p className="text-[10px] md:text-xs text-muted-foreground truncate font-medium">
-                      {progress.mediaType === 'series' || progress.mediaType === 'tv_show'
+                      {progress.mediaType === 'series' || (progress.mediaType as string) === 'tv_show'
                         ? (progress.seasonNumber && progress.episodeNumber
                           ? `S${progress.seasonNumber} : E${progress.episodeNumber}`
                           : `Continue episode`)

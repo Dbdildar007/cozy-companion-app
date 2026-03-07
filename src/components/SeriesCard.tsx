@@ -53,8 +53,8 @@ export default function SeriesCard({
 
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: hovered ? 1 : 0 }}
-          className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent flex flex-col justify-end p-3 space-y-1"
+          animate={{ opacity: typeof window !== 'undefined' && window.innerWidth < 768 ? 1 : (hovered ? 1 : 0) }}
+          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-3"
         >
           <p className="text-[10px] md:text-xs text-muted-foreground">
             {series.release_year} • {series.genre?.join(", ")}
@@ -63,14 +63,16 @@ export default function SeriesCard({
           {onRate && (
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={(e) => {
-                    e.stopPropagation(); 
-                    onRate(series.id, star);
-                  }}
-                  className="focus:outline-none transition-transform active:scale-125 p-0"
-                >
+        <button
+  onClick={(e) => {
+    e.stopPropagation();
+    onToggleWatchlist(movie.id);
+  }}
+  // Added 'py-2' to make the hit-box larger for thumbs on mobile
+  className={`mt-2 py-2 flex items-center gap-1 text-xs font-medium transition-colors ${
+    isInWatchlist ? "text-primary" : "text-foreground"
+  }`}
+>
                   <Star
                     className={`w-3 h-3 transition-colors ${
                       star <= userRating

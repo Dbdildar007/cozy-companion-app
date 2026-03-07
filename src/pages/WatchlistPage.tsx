@@ -53,11 +53,7 @@ const movies = useMemo(() => {
                   </button>
                 </div>
               </div>
-             // DELETE THESE LINES:
-<div className="md:hidden p-2">
-  <p className="text-foreground text-xs font-medium truncate">{movie.title}</p>
-  <p className="text-muted-foreground text-[10px]">{movie.year}</p>
-</div>
+
             </motion.div>
           ))}
         </div>

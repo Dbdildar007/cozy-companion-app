@@ -19,44 +19,40 @@ useEffect(() => {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+    // ... inside your useEffect
+const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+  setSession(session);
+  setUser(session?.user ?? null);
+  setLoading(false);
 
-      // --- START HOTSTAR KILL-SWITCH LOGIC ---
-      if (event === 'SIGNED_IN' && session?.user) {
-        const myInfo = await getDeviceInfo();
+  if (event === 'SIGNED_IN' && session?.user) {
+    const myInfo = await getDeviceInfo();
 
-        // Subscribe to the profile row for the logged-in user
-        const channel = supabase
-          .channel(`session_guard_${session.user.id}`)
-          .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'profiles',
-            filter: `user_id=eq.${session.user.id}`
-          }, (payload) => {
-            const dbSessionId = payload.new.active_session_id;
-            const dbDeviceId = payload.new.device_info?.deviceId;
+    const channel = supabase
+      .channel(`session_guard_${session.user.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `user_id=eq.${session.user.id}`
+      }, (payload) => {
+        // --- ADD THE CODE HERE ---
+        const dbDeviceId = payload.new.device_info?.deviceId;
 
-            // If the DB session ID changed AND it's not this device's ID, force logout
-            if (dbSessionId && dbSessionId !== session.access_token && dbDeviceId !== myInfo.deviceId) {
-              supabase.auth.signOut();
-              // You can use your project's toast or a simple alert
-              alert("You have been logged out because you signed in on another device.");
-            }
-          })
-          .subscribe();
+        // If the device ID in the DB is now different from this browser's local ID
+        if (dbDeviceId && dbDeviceId !== myInfo.deviceId) {
+          supabase.auth.signOut();
+          alert("Logged out: You signed in on another device.");
+        }
+        // -------------------------
+      })
+      .subscribe();
 
-        // Cleanup the channel if the user logs out or component unmounts
-        return () => {
-          supabase.removeChannel(channel);
-        };
-      }
-      // --- END HOTSTAR KILL-SWITCH LOGIC ---
-    });
-
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+});
     return () => {
       subscription.unsubscribe();
     };

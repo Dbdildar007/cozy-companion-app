@@ -45,8 +45,8 @@ export default function MovieCard({ movie, onSelect, onDownload, downloadState, 
         {/* Hover overlay */}
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: hovered ? 1 : 0 }}
-          className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent flex flex-col justify-end p-3"
+          animate={{ opacity: window.innerWidth < 768 ? 1 : (hovered ? 1 : 0) }}
+          className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent md:from-background md:via-background/50 flex flex-col justify-end p-3 transition-opacity"
         >
           <div className="flex items-center gap-1 mb-1">
             {[1, 2, 3, 4, 5].map((star) => (

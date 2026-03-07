@@ -7,6 +7,8 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(!supabase.auth.getSession());
 
+
+  // 1. ADD THIS HELPER FUNCTION INSIDE useAuth
   const getSimpleDeviceInfo = () => {
     const ua = navigator.userAgent;
     let browser = "Unknown Browser";
@@ -33,40 +35,45 @@ export function useAuth() {
     };
   };
 
+  // 2. ADD THIS SYNC FUNCTION
   const syncDeviceInfo = async (userId: string) => {
     const info = getSimpleDeviceInfo();
-    const { error } = await (supabase.from("profiles") as any)
+    const { error } = await supabase
+      .from("profiles")
       .update({ device_info: info })
-      .eq("user_id", userId);
+      .eq("user_id", userId); // Use 'user_id' to match your schema
     
     if (error) console.error("Error updating device info:", error);
   };
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      if (session?.user) {
-        syncDeviceInfo(session.user.id);
-      }
-    });
+useEffect(() => {
+  // 1. Immediately check for an existing session (Fastest)
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setSession(session);
+    setUser(session?.user ?? null);
+    setLoading(false); // UI shows up immediately here
+    
+    if (session?.user) {
+      syncDeviceInfo(session.user.id);
+    }
+  });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      if (event === "SIGNED_IN" && currentUser) {
-        syncDeviceInfo(currentUser.id);
-      }
-      
-      setLoading(false);
-    });
+  // 2. Listen for future changes (Login/Logout)
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    setSession(session);
+    const currentUser = session?.user ?? null;
+    setUser(currentUser);
+    
+    if (event === "SIGNED_IN" && currentUser) {
+      syncDeviceInfo(currentUser.id);
+    }
+    
+    // Safety check to ensure loading is off
+    setLoading(false);
+  });
 
-    return () => subscription.unsubscribe();
-  }, []);
+  return () => subscription.unsubscribe();
+}, []);
 
   const signUp = async (email: string, password: string, displayName: string) => {
     const { data, error } = await supabase.auth.signUp({
@@ -80,37 +87,40 @@ export function useAuth() {
     return { data, error };
   };
 
-  const signIn = async (email: string, password: string, force = false): Promise<any> => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (error || !data.user) return { data, error };
+  const signIn = async (email: string, password: string, force = false) => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  
+  if (error || !data.user) return { data, error };
 
-    // Fetch the current profile to check for other devices
-    const { data: profile } = await (supabase.from('profiles') as any)
-      .select('device_info')
-      .eq('user_id', data.user.id)
-      .single();
+  // Fetch the current profile to check for other devices
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('device_info')
+    .eq('user_id', data.user.id)
+    .single();
 
-    // Logic: If a device is already there and it's not THIS one
-    if (profile?.device_info && !force) {
-      if (profile.device_info.raw_ua !== navigator.userAgent) {
-        await supabase.auth.signOut();
-        return { isLimited: true, existingDevice: profile.device_info, error: null };
-      }
+  // Logic: If a device is already there and it's not THIS one
+  if (profile?.device_info && !force) {
+    if (profile.device_info.raw_ua !== navigator.userAgent) {
+      await supabase.auth.signOut(); // Logout the new attempt immediately
+      return { 
+        data: null, 
+        error: { message: "ALREADY_LOGGED_IN" }, 
+        existingDevice: profile.device_info 
+      };
     }
+  }
 
-    return { data, error: null }; 
-  };
+  return { data, error: null };
+};
 
-  const signOut = async () => {
-    if (user) {
-      await (supabase.from("profiles") as any).update({ device_info: null }).eq("user_id", user.id);
-    }
-    await supabase.auth.signOut();
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.href = "/auth";
-  };
+ const signOut = async () => {
+  if (user) {
+    // Clear device_info so the slot is free
+    await supabase.from("profiles").update({ device_info: null }).eq("user_id", user.id);
+  }
+  await supabase.auth.signOut();
+};
 
   return { user, session, loading, signUp, signIn, signOut };
 }

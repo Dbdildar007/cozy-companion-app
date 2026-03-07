@@ -71,7 +71,7 @@ export default function SeriesVideoPlayer({
     series.id,
     v.currentTime,
     v.duration,
-    'series',
+    'tv_show',
     currentEpisode.id,
     selectedSeason
   );

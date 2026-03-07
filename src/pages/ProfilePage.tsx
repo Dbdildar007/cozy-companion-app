@@ -16,11 +16,10 @@ export default function ProfilePage() {
   const { ratings } = useRatings();
   const { getContinueWatching } = useWatchProgress();
 
-const [profile, setProfile] = useState<{ display_name: string; unique_id: string } | null>(() => {
-  // This runs instantly on page load before the first render
-  const saved = localStorage.getItem('user_profile');
-  return saved ? JSON.parse(saved) : null;
-});
+  const [profile, setProfile] = useState<{ display_name: string; unique_id: string } | null>(() => {
+    const saved = localStorage.getItem('user_profile');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   // Change password state
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -31,60 +30,16 @@ const [profile, setProfile] = useState<{ display_name: string; unique_id: string
   const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      localStorage.removeItem('user_profile');
-      return;
-    }
-
-    // 1. Initial Fetch
-    // Inside useEffect...
-supabase
-  .from("profiles")
-  .select("display_name, unique_id")
-  .eq("user_id", user.id)
-  .single()
-  .then(({ data }) => {
-    if (data) {
-      const cached = localStorage.getItem('user_profile');
-      // Only update state if data is actually different to prevent flicker
-      if (JSON.stringify(data) !== cached) {
-        setProfile(data);
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("display_name, unique_id")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setProfile(data);
         localStorage.setItem('user_profile', JSON.stringify(data));
-      }
-    }
-  });
-
-    // 2. Realtime Listener (The "Ghost Fix")
-    const channel = supabase
-      .channel(`profile-changes-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          // If device_info changed to something else, wipe the UI
-          const newDevice = payload.new.device_info;
-          if (newDevice && newDevice.raw_ua !== navigator.userAgent) {
-            setProfile(null);
-            localStorage.clear();
-            sessionStorage.clear();
-            localStorage.removeItem('user_profile');
-         // CHANGE THIS: Use navigate instead of window.location.href
-            navigate("/auth?reason=session_expired");
-            toast.error("Session expired: Logged out from another device");
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      });
   }, [user]);
 
   const historyCount = getContinueWatching().length;
@@ -98,22 +53,12 @@ supabase
     { icon: Settings, label: "Settings", count: null, action: () => navigate("/settings") },
   ];
 
-const handleSignOut = async () => {
-  // 1. Instant UI Wipe (Zero Latency)
-  setProfile(null);
-  localStorage.removeItem('user_profile');
-  localStorage.clear();
-  sessionStorage.clear();
+  const handleSignOut = async () => {
     await signOut();
-  toast.success("Signed out successfully");
-
-  
-  // 2. Navigate immediately to avoid white screen
-  navigate("/auth");
-
-  // 3. Let the network request happen in the background
-
-};
+    localStorage.removeItem('user_profile');
+    toast.success("Signed out");
+    navigate("/");
+  };
 
   const copyUniqueId = () => {
     if (profile?.unique_id) {

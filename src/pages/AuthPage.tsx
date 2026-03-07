@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { DeviceLimitModal } from "@/components/DeviceLimitModal";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,24 +24,37 @@ export default function AuthPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetEmailError, setResetEmailError] = useState("");
 
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [activeDevice, setActiveDevice] = useState<any>(null);
+
   useEffect(() => {
     if (user) {
       navigate("/", { replace: true });
     }
   }, [user, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     if (isLogin) {
-      const { error } = await signIn(email, password);
-      if (error) {
-        if (error.message.includes("Email not confirmed")) {
+      // 1. Call signIn and capture the result
+      const res = await signIn(email, password);
+      
+      // 2. Check if a device limit was reached
+      if (res.error?.message === "ALREADY_LOGGED_IN") {
+        setActiveDevice(res.existingDevice);
+        setShowLimitModal(true);
+        setLoading(false);
+        return; // Stop here to show the modal
+      }
+
+      if (res.error) {
+        if (res.error.message.includes("Email not confirmed")) {
           toast.error("Please verify your email first.");
           setShowVerification(true);
         } else {
-          toast.error(error.message);
+          toast.error(res.error.message);
         }
       } else {
         toast.success("Welcome back!");
@@ -56,6 +70,22 @@ export default function AuthPage() {
       } else {
         setShowVerification(true);
       }
+    }
+    setLoading(false);
+  };
+
+  const handleForceSignIn = async () => {
+    setShowLimitModal(false);
+    setLoading(true);
+    
+    // Pass 'true' as the third argument to force logout other devices
+    const res = await signIn(email, password, true);
+    
+    if (res.error) {
+      toast.error(res.error.message);
+    } else {
+      toast.success("Logged in successfully. Other sessions cleared.");
+      navigate("/");
     }
     setLoading(false);
   };
@@ -211,6 +241,16 @@ export default function AuthPage() {
           </p>
         </motion.form>
       </div>
+
+{/* ADD THE MODAL CODE HERE */}
+      {showLimitModal && activeDevice && (
+        <DeviceLimitModal 
+          deviceInfo={activeDevice} 
+          onConfirm={handleForceSignIn} 
+          onCancel={() => setShowLimitModal(false)} 
+        />
+      )}      
+      
     </motion.div>
   );
 }

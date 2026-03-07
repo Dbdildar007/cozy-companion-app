@@ -99,14 +99,17 @@ useEffect(() => {
       };
     }
 
+   const newSessionId = crypto.randomUUID();
+   
+
     // 4. No conflict? Update the DB immediately
     await supabase.rpc('handle_single_device_login', {
       target_user_id: data.user.id,
-      new_session_id: data.session.access_token,
+      new_session_id: newSessionId,
       new_device_info: myInfo
     });
 
-    return { data, error: null, conflict: false };
+    return { data, error: null, conflict: false, sessionId: newSessionId };
   };
 
  const signOut = async () => {

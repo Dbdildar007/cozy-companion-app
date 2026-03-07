@@ -71,10 +71,12 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event,
     return { data, error };
   };
 
- const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  
   if (error || !data.user || !data.session) return { data, error };
 
+  // 1. Fetch profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('active_session_id, device_info')
@@ -83,25 +85,31 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event,
 
   const myInfo = await getDeviceInfo();
 
+  // 2. Check for conflict
   if (profile?.active_session_id && profile.device_info?.deviceId !== myInfo.deviceId) {
     return { data, error: null, conflict: true, existingDevice: profile.device_info };
   }
 
+  // 3. Generate UUID for the database
   const newSessionId = crypto.randomUUID();
 
-  // Add error handling to the RPC call to see if it's failing
+  // 4. Call RPC and WAIT for the result
   const { error: rpcError } = await supabase.rpc('handle_single_device_login', {
     target_user_id: data.user.id,
     new_session_id: newSessionId,
     new_device_info: myInfo
   });
-console.log("errr",rpcError);
+
   if (rpcError) {
-    console.error("RPC failed:", rpcError.message);
+    console.error("Database update failed:", rpcError.message);
+    // Return the error so the user knows the session couldn't be initialized
+    return { data, error: rpcError, conflict: false };
   }
 
   return { data, error: null, conflict: false, sessionId: newSessionId };
 };
+
+  
  const signOut = async () => {
   if (user) {
     // Clear device_info so the slot is free

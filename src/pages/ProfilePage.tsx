@@ -53,12 +53,12 @@ export default function ProfilePage() {
     { icon: Settings, label: "Settings", count: null, action: () => navigate("/settings") },
   ];
 
-  const handleSignOut = async () => {
-    await signOut();
-    localStorage.removeItem('user_profile');
-    toast.success("Signed out");
-    navigate("/");
-  };
+const handleSignOut = async () => {
+  await signOut();
+  setProfile(null); // Add this to clear the UI immediately
+  localStorage.removeItem('user_profile');
+  navigate("/");
+};
 
   const copyUniqueId = () => {
     if (profile?.unique_id) {

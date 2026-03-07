@@ -34,7 +34,7 @@ export default function AuthPage() {
     }
   }, [user, navigate]);
 
-  useEffect(() => {
+useEffect(() => {
     const mySessionId = localStorage.getItem("current_session_id");
     
     if (!user || !mySessionId) return;
@@ -45,7 +45,7 @@ export default function AuthPage() {
         event: 'UPDATE', 
         schema: 'public', 
         table: 'profiles',
-        filter: `user_id=eq.${user.id}`` 
+        filter: `user_id=eq.${user.id}` // Fixed the extra backtick here
       }, (payload) => {
         if (payload.new.active_session_id !== mySessionId) {
           toast.error("Logged out: Another device has signed in.");
@@ -57,25 +57,29 @@ export default function AuthPage() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
+
+  
   
  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (isLogin) {
-      // 1. Call signIn and capture the result
-      const res = await signIn(email, password);
-      
-      // 2. Check if a device limit was reached
-      if (res.error?.message === "ALREADY_LOGGED_IN") {
-        setActiveDevice(res.existingDevice);
-        setShowLimitModal(true);
-        setLoading(false);
-        return; // Stop here to show the modal
-      }
-
+   // ... inside handleSubmit
+      if (isLogin) {
+        const res = await signIn(email, password);
+        
+        if (res.error?.message === "ALREADY_LOGGED_IN") {
+          // This must match the state name you use for the modal
+          setActiveDevice(res.existingDevice);
+          setShowLimitModal(true); 
+          setLoading(false);
+          return; // IMPORTANT: Prevent navigation
+        }
+  
       if (res.error) {
         if (res.error.message.includes("Email not confirmed")) {
           toast.error("Please verify your email first.");
@@ -270,13 +274,14 @@ export default function AuthPage() {
       </div>
 
 {/* ADD THE MODAL CODE HERE */}
-      {showLimitModal && activeDevice && (
-        <DeviceLimitModal 
-          deviceInfo={activeDevice} 
-          onConfirm={handleForceSignIn} 
-          onCancel={() => setShowLimitModal(false)} 
-        />
-      )}      
+{showLimitModal && activeDevice && (
+  <DeviceLimitModal 
+    isOpen={showLimitModal} // Add this if the modal uses it to show/hide
+    deviceInfo={activeDevice} 
+    onConfirm={handleForceSignIn} 
+    onClose={() => setShowLimitModal(false)} // Change onCancel to onClose to match common naming
+  />
+)}    
       
     </motion.div>
   );

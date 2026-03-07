@@ -32,7 +32,7 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || profile) return;
     supabase
       .from("profiles")
       .select("display_name, unique_id")
@@ -42,7 +42,7 @@ export default function ProfilePage() {
         if (data) setProfile(data);
         localStorage.setItem('user_profile', JSON.stringify(data));
       });
-  }, [user,profile]);
+  }, [user]);
 
   const historyCount = getContinueWatching().length;
   const ratingsCount = Object.keys(ratings).length;

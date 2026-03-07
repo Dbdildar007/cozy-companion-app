@@ -1,5 +1,5 @@
 export const getDeviceInfo = async () => {
-  // 1. Get or Create a persistent Device ID in localStorage
+  // 1. Persistent Device ID
   let deviceId = localStorage.getItem('device_id');
   if (!deviceId) {
     deviceId = crypto.randomUUID();
@@ -18,11 +18,22 @@ export const getDeviceInfo = async () => {
 
   let ip = "Unknown IP";
   try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const data = await res.json();
-    ip = data.ip;
-  } catch (e) { console.error("IP Fetch failed", e); }
+    // Adding a timeout to the fetch so it doesn't hang the login
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 sec timeout
 
+    const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (res.ok) {
+      const data = await res.json();
+      ip = data.ip;
+    }
+  } catch (e) {
+    console.warn("IP Fetch failed, continuing with 'Unknown IP'", e);
+  }
+
+  // ALWAYS return this object even if IP fetch fails
   return {
     deviceId,
     deviceName: getDeviceName(),

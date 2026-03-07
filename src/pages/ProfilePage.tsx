@@ -60,13 +60,18 @@ useEffect(() => {
   ];
 
 const handleSignOut = async () => {
-    await signOut(); // This now clears the DB session automatically
-    setProfile(null);
-    localStorage.removeItem('user_profile');
-    localStorage.removeItem('device_id'); // Optional: Clear this if you want the device to be "new" next time
-    toast.success("Signed out successfully");
-    navigate("/auth");
-  };
+  // 1. Immediate UI feedback
+  toast.success("Signing out...");
+  navigate("/auth");
+
+  // 2. Perform cleanup in the background (no 'await' before navigate)
+  setProfile(null);
+  localStorage.removeItem('user_profile');
+  localStorage.removeItem('device_id');
+  
+  // 3. Fire and forget the server-side sign out
+  signOut().catch(err => console.error("Logout error:", err));
+};
 
   const copyUniqueId = () => {
     if (profile?.unique_id) {

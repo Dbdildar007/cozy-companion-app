@@ -123,9 +123,11 @@ export default function MovieModal({
                 ))}
               </div>
 
+                <p className="text-foreground/80 text-sm leading-relaxed mb-6">{movie.description}</p>
+
               {/* Add this block around Line 110 */}
 <div className="flex items-center gap-1 mb-6">
-  <span className="text-sm text-muted-foreground mr-2">Your Rating:</span>
+  <span className="text-sm text-muted-foreground mr-2"> Like it:</span>
   {[1, 2, 3, 4, 5].map((star) => (
     <button
       key={star}
@@ -144,8 +146,6 @@ export default function MovieModal({
 </div>
 
               
-
-              <p className="text-foreground/80 text-sm leading-relaxed mb-6">{movie.description}</p>
 
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2 mb-4">

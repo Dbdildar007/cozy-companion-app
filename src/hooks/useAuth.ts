@@ -86,33 +86,45 @@ useEffect(() => {
     });
     return { data, error };
   };
-
-  const signIn = async (email: string, password: string, force = false) => {
+const signIn = async (email: string, password: string, force = false) => {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   
   if (error || !data.user) return { data, error };
 
-  // Fetch the current profile to check for other devices
+  // 1. Check if an active session already exists in the DB
   const { data: profile } = await supabase
     .from('profiles')
-    .select('device_info')
+    .select('active_session_id')
     .eq('user_id', data.user.id)
     .single();
 
-  // Logic: If a device is already there and it's not THIS one
-  if (profile?.device_info && !force) {
-    if (profile.device_info.raw_ua !== navigator.userAgent) {
-      await supabase.auth.signOut(); // Logout the new attempt immediately
-      return { 
-        data: null, 
-        error: { message: "ALREADY_LOGGED_IN" }, 
-        existingDevice: profile.device_info 
-      };
-    }
+  // 2. If a session exists and we aren't "forcing" a login, block it
+  if (profile?.active_session_id && !force) {
+    await supabase.auth.signOut(); // Terminate the temporary session
+    return { 
+      data: null, 
+      error: { message: "ALREADY_LOGGED_IN" } 
+    };
   }
+
+  // 3. If we are forcing (or it's a fresh login), generate a NEW ID
+  const newSessionId = crypto.randomUUID();
+  
+  // Save to local browser storage so this device knows its ID
+  localStorage.setItem("current_session_id", newSessionId);
+
+  // Update DB: This change will be broadcast to Device 1
+  await supabase
+    .from('profiles')
+    .update({ 
+      active_session_id: newSessionId,
+      device_info: { raw_ua: navigator.userAgent, last_login: new Date().toISOString() } 
+    })
+    .eq('user_id', data.user.id);
 
   return { data, error: null };
 };
+ 
 
  const signOut = async () => {
   if (user) {

@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { DeviceLimitModal } from "@/components/DeviceLimitModal";
 
 import { getDeviceInfo } from "@/utils/deviceInfo";
 import {
@@ -50,82 +49,47 @@ export default function AuthPage() {
     }
   }, [user, navigate]);
 
-  // ADD THE NEW CODE HERE (Starting at Line 35)
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('public:profiles')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newDevice = payload.new.device_info;
-          const currentUA = navigator.userAgent;
-
-          if (newDevice && newDevice.raw_ua !== currentUA) {
-            toast.error("Logged in from another device. Redirecting...");
-            setTimeout(() => {
-              supabase.auth.signOut();
-              window.location.href = "/auth";
-            }, 2000);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-
- const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    if (isLogin) {
-  const { data, error } = await signIn(email, password);
   
-  if (error) {
-    setError(error.message);
-    setLoading(false);
-    return;
-  }
+// --- Replace your current handleSubmit with this ---
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-  if (data.user && data.session) {
-    const currentInfo = await getDeviceInfo();
+  if (isLogin) {
+    // 1. Call the hook's signIn (it now handles conflict detection)
+    const res = await signIn(email, password);
 
-    // Fetch profile to check for existing sessions
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('active_session_id, device_info')
-      .eq('user_id', data.user.id)
-      .single();
+    if (res.error) {
+      toast.error(res.error.message); // Use your toast for errors
+      setLoading(false);
+      return;
+    }
 
-    const hasActiveSession = !!profile?.active_session_id;
-    const isDifferentDevice = profile?.device_info?.deviceId !== currentInfo.deviceId;
-
-    if (hasActiveSession && isDifferentDevice) {
-      // Conflict detected: Store auth data and show modal
-      setExistingDevice(profile.device_info);
-      setPendingAuth({ user: data.user, session: data.session });
+    // 2. Check the custom 'conflict' flag we added to useAuth
+    if (res.conflict) {
+      setExistingDevice(res.existingDevice);
+      setPendingAuth({ user: res.data.user, session: res.data.session });
       setShowConflict(true);
       setLoading(false);
     } else {
-      // No conflict or same device: Finalize login immediately
-      await finalizeLogin(data.user.id, data.session.access_token, currentInfo);
+      // 3. If no conflict, useAuth already handled the RPC call
+      navigate("/");
     }
+  } else {
+    // Handle Sign Up
+    const res = await signUp(email, password, displayName);
+    if (res.error) {
+      toast.error(res.error.message);
+    } else {
+      setShowVerification(true);
+    }
+    setLoading(false);
   }
-}
+};
 
-   const finalizeLogin = async (userId: string, token: string, info: any) => {
+ const finalizeLogin = async (userId: string, token: string, info: any) => {
   try {
+    // We still call the RPC here when the user clicks "Logout & Continue" in the modal
     await supabase.rpc('handle_single_device_login', {
       target_user_id: userId,
       new_session_id: token, 
@@ -133,26 +97,10 @@ export default function AuthPage() {
     });
     navigate("/");
   } catch (err) {
-    console.error("Login finalization failed:", err);
-    setError("Failed to sync session. Please try again.");
+    toast.error("Failed to sync session. Please try again.");
   }
 };
 
-  const handleForceSignIn = async () => {
-    setShowLimitModal(false);
-    setLoading(true);
-    
-    // Pass 'true' as the third argument to force logout other devices
-    const res = await signIn(email, password, true);
-    
-    if (res.error) {
-      toast.error(res.error.message);
-    } else {
-      toast.success("Logged in successfully. Other sessions cleared.");
-      navigate("/");
-    }
-    setLoading(false);
-  };
 
   const validateEmail = (em: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.trim());
 

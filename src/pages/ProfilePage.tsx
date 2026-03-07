@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const { getContinueWatching } = useWatchProgress();
 
 const [profile, setProfile] = useState<{ display_name: string; unique_id: string } | null>(() => {
-  // This runs instantly on page load
+  // This runs instantly on page load before the first render
   const saved = localStorage.getItem('user_profile');
   return saved ? JSON.parse(saved) : null;
 });
@@ -100,6 +100,8 @@ const handleSignOut = async () => {
     // 2. Wipe ALL local storage (including 'user_profile' and movie caches)
     localStorage.clear();
     sessionStorage.clear();
+  localStorage.removeItem('user_profile'); // Clear the cache
+  setProfile(null); // Clear the UI
     
     toast.success("Signed out successfully");
 

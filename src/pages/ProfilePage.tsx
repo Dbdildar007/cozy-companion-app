@@ -21,6 +21,8 @@ export default function ProfilePage() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  console.log("currentl - Profile in cache:", localStorage.getItem('user_profile'));
+
   // Change password state
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -54,9 +56,13 @@ export default function ProfilePage() {
   ];
 
 const handleSignOut = async () => {
+  console.log("Before logout - Profile in cache:", localStorage.getItem('user_profile'));
   await signOut();
   setProfile(null); // Add this to clear the UI immediately
   localStorage.removeItem('user_profile');
+  console.log("After logout - Profile in cache:", localStorage.getItem('user_profile'));
+  
+  toast.success("Logged out from this device");
   navigate("/");
 };
 

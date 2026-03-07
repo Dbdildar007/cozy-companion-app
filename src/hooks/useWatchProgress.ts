@@ -32,8 +32,8 @@ export function useWatchProgress() {
   useEffect(() => {
     if (!user) return;
   const fetchProgress = async () => {
-      const { data } = await supabase
-        .from("watch_progress")
+      const { data } = await (supabase
+        .from("watch_progress") as any)
         .select("movie_id, episode_id, media_type, current_time_sec, duration_sec, last_watched, season_number, episode_number")
         .eq("user_id", user.id);
 

@@ -34,32 +34,41 @@ export default function AuthPage() {
     }
   }, [user, navigate]);
 
+  // ADD THE NEW CODE HERE (Starting at Line 35)
   useEffect(() => {
-    const mySessionId = localStorage.getItem("current_session_id");
-    
-    if (!user || !mySessionId) return;
+    if (!user) return;
 
     const channel = supabase
-      .channel('session_guard')
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'profiles',
-        filter: `user_id=eq.${user.id}`` 
-      }, (payload) => {
-        if (payload.new.active_session_id !== mySessionId) {
-          toast.error("Logged out: Another device has signed in.");
-          setTimeout(() => {
-            supabase.auth.signOut();
-            window.location.reload();
-          }, 1500);
+      .channel('public:profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newDevice = payload.new.device_info;
+          const currentUA = navigator.userAgent;
+
+          if (newDevice && newDevice.raw_ua !== currentUA) {
+            toast.error("Logged in from another device. Redirecting...");
+            setTimeout(() => {
+              supabase.auth.signOut();
+              window.location.href = "/auth";
+            }, 2000);
+          }
         }
-      })
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
-  
+
+
  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

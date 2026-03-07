@@ -28,6 +28,8 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event,
   if (event === 'SIGNED_IN' && session?.user) {
     const myInfo = await getDeviceInfo();
 
+    console.log("info",myInfo);
+
     const channel = supabase
       .channel(`session_guard_${session.user.id}`)
       .on('postgres_changes', {

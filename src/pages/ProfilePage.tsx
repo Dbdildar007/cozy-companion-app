@@ -33,6 +33,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user || profile) return;
+    console.log("Fetching profile for device check:", user.id);
     supabase
       .from("profiles")
       .select("display_name, unique_id")
@@ -57,9 +58,8 @@ export default function ProfilePage() {
 
 const handleSignOut = async () => {
   await signOut();
-  setProfile(null); // Add this to clear the UI immediately
+  setProfile(null); 
   localStorage.removeItem('user_profile');
-  console.log("After logout - Profile in cache:", localStorage.getItem('user_profile'));
   
   toast.success("Signed out successfully");
   navigate("/auth");

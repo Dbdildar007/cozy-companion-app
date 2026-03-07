@@ -18,6 +18,10 @@ export default function AuthPage() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
+  // ADD THIS: Check for the logout reason
+  const searchParams = new URLSearchParams(window.location.search);
+  const logoutReason = searchParams.get("reason");
+
   // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -56,7 +60,8 @@ export default function AuthPage() {
             toast.error("Logged in from another device. Redirecting...");
             setTimeout(() => {
               supabase.auth.signOut();
-              window.location.href = "/auth";
+              localStorage.clear();
+             window.location.href = "/auth?reason=session_expired";
             }, 2000);
           }
         }
@@ -188,6 +193,18 @@ export default function AuthPage() {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-background flex items-center justify-center px-4 pt-16 pb-24">
         <div className="w-full max-w-sm">
+
+          {/* ADD THIS MESSAGE BOX */}
+        {logoutReason === "session_expired" && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-destructive/15 border border-destructive/30 text-destructive text-xs p-3 rounded-lg mb-6 text-center"
+          >
+            You were logged out because your account is active on another device.
+          </motion.div>
+        )}
+          
           <div className="text-center mb-8">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", damping: 15 }} className="mx-auto w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mb-4">
               <KeyRound className="w-8 h-8 text-primary" />

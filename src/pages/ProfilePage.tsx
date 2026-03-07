@@ -69,8 +69,9 @@ const [profile, setProfile] = useState<{ display_name: string; unique_id: string
             localStorage.clear();
             sessionStorage.clear();
             localStorage.removeItem('user_profile');
-            window.location.href = "/auth?reason=session_expired";
-            // Optional: toast.error("Logged out from another device");
+         // CHANGE THIS: Use navigate instead of window.location.href
+            navigate("/auth?reason=session_expired");
+            toast.error("Session expired: Logged out from another device");
           }
         }
       )

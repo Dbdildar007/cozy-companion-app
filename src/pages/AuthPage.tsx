@@ -70,16 +70,15 @@ useEffect(() => {
 
    // ... inside handleSubmit
       if (isLogin) {
-  const res = await signIn(email, password);
-  
-  if (res.error?.message === "ALREADY_LOGGED_IN") {
-    // Capture the existing device info passed back from useAuth
-    setActiveDevice(res.existingDevice); 
-    setShowLimitModal(true);
-    setLoading(false);
-    return; // Stop the redirect
-  }
-  // ... rest of your code
+        const res = await signIn(email, password);
+        
+        if (res.error?.message === "ALREADY_LOGGED_IN") {
+          // This must match the state name you use for the modal
+          setActiveDevice(res.existingDevice);
+          setShowLimitModal(true); 
+          setLoading(false);
+          return; // IMPORTANT: Prevent navigation
+        }
   
       if (res.error) {
         if (res.error.message.includes("Email not confirmed")) {

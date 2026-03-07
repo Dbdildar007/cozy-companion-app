@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Star, Tv, Plus, CheckCircle } from "lucide-react"; 
 import type { Series } from "@/services/seriesService";
+
 
 interface SeriesCardProps {
   series: any;
@@ -22,6 +23,14 @@ export default function SeriesCard({
   isWatchlisted = false // Default to false
 }: SeriesCardProps) {
   const [hovered, setHovered] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <motion.div
@@ -53,7 +62,7 @@ export default function SeriesCard({
 
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: typeof window !== 'undefined' && window.innerWidth < 768 ? 1 : (hovered ? 1 : 0) }}
+          animate={{ opacity: isMobile ? 1 : (hovered ? 1 : 0) }}
           className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-3"
         >
           <p className="text-[10px] md:text-xs text-muted-foreground">

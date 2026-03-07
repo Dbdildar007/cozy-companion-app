@@ -7,6 +7,18 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { DeviceLimitModal } from "@/components/DeviceLimitModal";
 
+import { getDeviceInfo } from "@/utils/deviceInfo";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -26,6 +38,10 @@ export default function AuthPage() {
 
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [activeDevice, setActiveDevice] = useState<any>(null);
+
+  const [showConflict, setShowConflict] = useState(false);
+  const [existingDevice, setExistingDevice] = useState<any>(null);
+  const [pendingAuth, setPendingAuth] = useState<{user: any, session: any} | null>(null);
 
 // ... (existing code at line 29-33)
   useEffect(() => {
@@ -74,41 +90,53 @@ export default function AuthPage() {
     setLoading(true);
 
     if (isLogin) {
-      // 1. Call signIn and capture the result
-      const res = await signIn(email, password);
-      
-      // 2. Check if a device limit was reached
-      if (res.error?.message === "ALREADY_LOGGED_IN") {
-        setActiveDevice(res.existingDevice);
-        setShowLimitModal(true);
-        setLoading(false);
-        return; // Stop here to show the modal
-      }
-
-      if (res.error) {
-        if (res.error.message.includes("Email not confirmed")) {
-          toast.error("Please verify your email first.");
-          setShowVerification(true);
-        } else {
-          toast.error(res.error.message);
-        }
-      } else {
-        toast.success("Welcome back!");
-        navigate("/");
-      }
-    } else {
-      const { data, error } = await signUp(email, password, displayName);
-      if (error) {
-        toast.error(error.message);
-      } else if (data?.user && data.user.identities && data.user.identities.length === 0) {
-        toast.error("This email is already registered. Please sign in instead.", { duration: 5000 });
-        setIsLogin(true);
-      } else {
-        setShowVerification(true);
-      }
-    }
+  const { data, error } = await signIn(email, password);
+  
+  if (error) {
+    setError(error.message);
     setLoading(false);
-  };
+    return;
+  }
+
+  if (data.user && data.session) {
+    const currentInfo = await getDeviceInfo();
+
+    // Fetch profile to check for existing sessions
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('active_session_id, device_info')
+      .eq('user_id', data.user.id)
+      .single();
+
+    const hasActiveSession = !!profile?.active_session_id;
+    const isDifferentDevice = profile?.device_info?.deviceId !== currentInfo.deviceId;
+
+    if (hasActiveSession && isDifferentDevice) {
+      // Conflict detected: Store auth data and show modal
+      setExistingDevice(profile.device_info);
+      setPendingAuth({ user: data.user, session: data.session });
+      setShowConflict(true);
+      setLoading(false);
+    } else {
+      // No conflict or same device: Finalize login immediately
+      await finalizeLogin(data.user.id, data.session.access_token, currentInfo);
+    }
+  }
+}
+
+   const finalizeLogin = async (userId: string, token: string, info: any) => {
+  try {
+    await supabase.rpc('handle_single_device_login', {
+      target_user_id: userId,
+      new_session_id: token, 
+      new_device_info: info
+    });
+    navigate("/");
+  } catch (err) {
+    console.error("Login finalization failed:", err);
+    setError("Failed to sync session. Please try again.");
+  }
+};
 
   const handleForceSignIn = async () => {
     setShowLimitModal(false);
@@ -278,14 +306,36 @@ export default function AuthPage() {
         </motion.form>
       </div>
 
-{/* ADD THE MODAL CODE HERE */}
-      {showLimitModal && activeDevice && (
-        <DeviceLimitModal 
-          deviceInfo={activeDevice} 
-          onConfirm={handleForceSignIn} 
-          onCancel={() => setShowLimitModal(false)} 
-        />
-      )}      
+<AlertDialog open={showConflict}>
+  <AlertDialogContent className="bg-[#1a1d29] border-gray-800 text-white">
+    <AlertDialogHeader>
+      <AlertDialogTitle>Device Limit Reached</AlertDialogTitle>
+      <AlertDialogDescription className="text-gray-400">
+        You are already logged in on a <span className="text-white font-semibold">{existingDevice?.deviceName}</span> ({existingDevice?.ip}). 
+        Logging in here will log you out from the other device.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel 
+        onClick={() => setShowConflict(false)}
+        className="bg-transparent border-gray-700 hover:bg-gray-800 text-white"
+      >
+        Cancel
+      </AlertDialogCancel>
+      <AlertDialogAction 
+        onClick={async () => {
+          const info = await getDeviceInfo();
+          if (pendingAuth) {
+            await finalizeLogin(pendingAuth.user.id, pendingAuth.session.access_token, info);
+          }
+        }}
+        className="bg-blue-600 hover:bg-blue-700 text-white"
+      >
+        Logout & Continue
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>      
       
     </motion.div>
   );

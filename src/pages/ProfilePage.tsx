@@ -31,17 +31,20 @@ export default function ProfilePage() {
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
 
-  useEffect(() => {
-    if (!user || profile) return;
-    console.log("Fetching profile for device check:", user.id);
+useEffect(() => {
+    if (!user) return;
+    
+    // Just fetch the display name for the UI, don't worry about device checks here
     supabase
       .from("profiles")
       .select("display_name, unique_id")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        if (data) setProfile(data);
-        localStorage.setItem('user_profile', JSON.stringify(data));
+        if (data) {
+          setProfile(data);
+          localStorage.setItem('user_profile', JSON.stringify(data));
+        }
       });
   }, [user]);
 
@@ -57,13 +60,13 @@ export default function ProfilePage() {
   ];
 
 const handleSignOut = async () => {
-  await signOut();
-  setProfile(null); 
-  localStorage.removeItem('user_profile');
-  
-  toast.success("Signed out successfully");
-  navigate("/auth");
-};
+    await signOut(); // This now clears the DB session automatically
+    setProfile(null);
+    localStorage.removeItem('user_profile');
+    localStorage.removeItem('device_id'); // Optional: Clear this if you want the device to be "new" next time
+    toast.success("Signed out successfully");
+    navigate("/auth");
+  };
 
   const copyUniqueId = () => {
     if (profile?.unique_id) {

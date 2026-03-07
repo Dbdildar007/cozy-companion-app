@@ -10,27 +10,31 @@ export function useAuth() {
 
 useEffect(() => {
   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-    // 1. IMMEDIATELY update the UI state so the loading screen disappears
-    setSession(session);
-    setUser(session?.user ?? null);
-    setLoading(false); 
+    try {
+      setSession(session);
+      setUser(session?.user ?? null);
 
-    // 2. Run the database logic in the background
-    if (event === 'SIGNED_IN' && session?.user) {
-      try {
+      if (event === 'SIGNED_IN' && session?.user) {
         const myInfo = await getDeviceInfo();
+        
+        // Use a fallback for UUID if the browser doesn't support it
         const newSessionId = typeof crypto.randomUUID === 'function' 
           ? crypto.randomUUID() 
           : Math.random().toString(36).substring(2);
 
-        await supabase.rpc('handle_single_device_login', {
+        const { error: rpcError } = await supabase.rpc('handle_single_device_login', {
           target_user_id: session.user.id,
           new_session_id: newSessionId,
           new_device_info: myInfo
         });
-      } catch (err) {
-        console.error("Background sync failed:", err);
+
+        if (rpcError) console.error('RPC Error:', rpcError);
       }
+    } catch (err) {
+      console.error("Auth Change Error:", err);
+    } finally {
+      // ALWAYS set loading to false, even if the database update fails
+      setLoading(false);
     }
   });
 

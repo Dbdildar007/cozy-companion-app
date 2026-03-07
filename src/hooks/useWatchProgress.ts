@@ -114,7 +114,7 @@ export function useWatchProgress() {
             episode_number: episodeNumber, 
             current_time_sec: Math.round(currentTime),
             duration_sec: Math.round(duration),
-            media_type: mediaType === 'series' ? 'tv_show' : 'movie',
+            media_type: mediaType,
             last_watched: new Date().toISOString(),
           });
         }

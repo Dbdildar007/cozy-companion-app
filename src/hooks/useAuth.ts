@@ -108,7 +108,6 @@ const signIn = async (email: string, password: string, force = false) => {
     }
   }
 
-  // Return this if no conflict or if 'force' is true
   return { data, error: null }; 
 };
 
@@ -118,6 +117,9 @@ const signIn = async (email: string, password: string, force = false) => {
     await supabase.from("profiles").update({ device_info: null }).eq("user_id", user.id);
   }
   await supabase.auth.signOut();
+   localStorage.clear();
+  sessionStorage.clear();
+   window.location.href = "/auth";
 };
 
   return { user, session, loading, signUp, signIn, signOut };

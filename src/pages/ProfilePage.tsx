@@ -42,7 +42,7 @@ export default function ProfilePage() {
         if (data) setProfile(data);
         localStorage.setItem('user_profile', JSON.stringify(data));
       });
-  }, [user]);
+  }, [user,profile]);
 
   const historyCount = getContinueWatching().length;
   const ratingsCount = Object.keys(ratings).length;

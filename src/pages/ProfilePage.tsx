@@ -104,7 +104,7 @@ const handleSignOut = async () => {
 
     // 3. FORCE a full page reload to the auth page.
     // This is the "Magic Fix" that kills all "Ghost" data in React state.
-    window.location.href = "/auth";
+    navigate("/auth");
   };
 
   const copyUniqueId = () => {

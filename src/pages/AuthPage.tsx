@@ -27,11 +27,47 @@ export default function AuthPage() {
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [activeDevice, setActiveDevice] = useState<any>(null);
 
+// ... (existing code at line 29-33)
   useEffect(() => {
     if (user) {
       navigate("/", { replace: true });
     }
   }, [user, navigate]);
+
+  // ADD THE NEW CODE HERE (Starting at Line 35)
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('public:profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newDevice = payload.new.device_info;
+          const currentUA = navigator.userAgent;
+
+          if (newDevice && newDevice.raw_ua !== currentUA) {
+            toast.error("Logged in from another device. Redirecting...");
+            setTimeout(() => {
+              supabase.auth.signOut();
+              window.location.href = "/auth";
+            }, 2000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
 
  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

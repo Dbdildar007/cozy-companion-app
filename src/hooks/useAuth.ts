@@ -8,40 +8,70 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(!supabase.auth.getSession());
 
+
+
 useEffect(() => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-    try {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-
-      if (event === 'SIGNED_IN' && session?.user) {
-        const myInfo = await getDeviceInfo();
-        
-        // Use a fallback for UUID if the browser doesn't support it
-        const newSessionId = typeof crypto.randomUUID === 'function' 
-          ? crypto.randomUUID() 
-          : Math.random().toString(36).substring(2);
-
-        const { error: rpcError } = await supabase.rpc('handle_single_device_login', {
-          target_user_id: session.user.id,
-          new_session_id: newSessionId,
-          new_device_info: myInfo
-        });
-
-        if (rpcError) console.error('RPC Error:', rpcError);
-      }
-    } catch (err) {
-      console.error("Auth Change Error:", err);
-    } finally {
-      // ALWAYS set loading to false, even if the database update fails
       setLoading(false);
-    }
-  });
+    });
 
-  return () => subscription.unsubscribe();
-}, []);
+    // Listen for auth changes
+    // ... inside your useEffect
+const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+  setSession(session);
+  setUser(session?.user ?? null);
+  setLoading(false);
 
+  if (event === 'SIGNED_IN' && session?.user) {
+    const myInfo = await getDeviceInfo();
 
+    console.log("info",myInfo);
+
+    // --- ADD THIS BLOCK TO FIX YOUR ISSUE ---
+      const newSessionId = crypto.randomUUID();
+      const { error: rpcError } = await supabase.rpc('handle_single_device_login', {
+        target_user_id: session.user.id,
+        new_session_id: newSessionId,
+        new_device_info: myInfo
+      });
+
+      if (rpcError) {
+        console.error('Database update failed on session restore:', rpcError);
+      }
+    
+
+    const channel = supabase
+      .channel(`session_guard_${session.user.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `user_id=eq.${session.user.id}`
+      }, (payload) => {
+        // --- ADD THE CODE HERE ---
+        const dbDeviceId = payload.new.device_info?.deviceId;
+
+        // If the device ID in the DB is now different from this browser's local ID
+        if (dbDeviceId && dbDeviceId !== myInfo.deviceId) {
+          supabase.auth.signOut();
+          alert("Logged out: You signed in on another device.");
+        }
+        // -------------------------
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+});
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
   const signUp = async (email: string, password: string, displayName: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,

@@ -126,7 +126,7 @@ export default function SeriesModal({ series, onClose, onPlayEpisode, userRating
 
               {/* Star rating - Fixed to a single row */}
 <div className="mb-6 flex items-center gap-4">
-  <p className="text-xs text-muted-foreground whitespace-nowrap">Rating it</p>
+  <p className="text-xs text-muted-foreground whitespace-nowrap">Like it</p>
   <div className="flex gap-1">
     {[1, 2, 3, 4, 5].map((star) => (
       <button 

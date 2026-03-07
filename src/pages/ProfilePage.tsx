@@ -38,17 +38,22 @@ const [profile, setProfile] = useState<{ display_name: string; unique_id: string
     }
 
     // 1. Initial Fetch
-    supabase
-      .from("profiles")
-      .select("display_name, unique_id")
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setProfile(data);
-          localStorage.setItem('user_profile', JSON.stringify(data));
-        }
-      });
+    // Inside useEffect...
+supabase
+  .from("profiles")
+  .select("display_name, unique_id")
+  .eq("user_id", user.id)
+  .single()
+  .then(({ data }) => {
+    if (data) {
+      const cached = localStorage.getItem('user_profile');
+      // Only update state if data is actually different to prevent flicker
+      if (JSON.stringify(data) !== cached) {
+        setProfile(data);
+        localStorage.setItem('user_profile', JSON.stringify(data));
+      }
+    }
+  });
 
     // 2. Realtime Listener (The "Ghost Fix")
     const channel = supabase
@@ -94,21 +99,21 @@ const [profile, setProfile] = useState<{ display_name: string; unique_id: string
   ];
 
 const handleSignOut = async () => {
-    // 1. Run the base sign out logic (clears Supabase session)
+  // 1. Instant UI Wipe (Zero Latency)
+  setProfile(null);
+  localStorage.removeItem('user_profile');
+  localStorage.clear();
+  sessionStorage.clear();
     await signOut();
-    
-    // 2. Wipe ALL local storage (including 'user_profile' and movie caches)
-    localStorage.clear();
-    sessionStorage.clear();
-  localStorage.removeItem('user_profile'); // Clear the cache
-  setProfile(null); // Clear the UI
-    
-    toast.success("Signed out successfully");
+  toast.success("Signed out successfully");
 
-    // 3. FORCE a full page reload to the auth page.
-    // This is the "Magic Fix" that kills all "Ghost" data in React state.
-    navigate("/auth");
-  };
+  
+  // 2. Navigate immediately to avoid white screen
+  navigate("/auth");
+
+  // 3. Let the network request happen in the background
+
+};
 
   const copyUniqueId = () => {
     if (profile?.unique_id) {

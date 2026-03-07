@@ -125,24 +125,24 @@ export default function MovieModal({
 
                 <p className="text-foreground/80 text-sm leading-relaxed mb-6">{movie.description}</p>
 
-              {/* Add this block around Line 110 */}
-<div className="flex items-center gap-1 mb-6">
-  <span className="text-sm text-muted-foreground mr-2"> Like it:</span>
-  {[1, 2, 3, 4, 5].map((star) => (
-    <button
-      key={star}
-      onClick={() => onRate(movie.id, star)}
-      className="p-1 -m-1 transition-transform hover:scale-110"
-    >
-      <Star
-        className={`w-5 h-5 ${
-          star <= userRating 
-            ? "fill-cine-gold text-cine-gold" 
-            : "text-muted-foreground"
-        }`}
-      />
-    </button>
-  ))}
+             {/* Star rating - Row layout fix */}
+<div className="mb-6 flex items-center gap-4">
+  <p className="text-xs text-muted-foreground whitespace-nowrap">Like it</p>
+  <div className="flex gap-1">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button 
+        key={star} 
+        onClick={() => onRate?.(movie.id, star)}
+        className="p-1 -m-1 transition-transform hover:scale-110"
+      >
+        <Star 
+          className={`w-6 h-6 transition-colors ${
+            star <= userRating ? "text-cine-gold fill-cine-gold" : "text-muted-foreground"
+          }`} 
+        />
+      </button>
+    ))}
+  </div>
 </div>
 
               

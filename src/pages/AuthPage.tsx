@@ -87,17 +87,26 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 };
 
- const finalizeLogin = async (userId: string, token: string, info: any) => {
+const finalizeLogin = async (userId: string, info: any) => {
   try {
-    // We still call the RPC here when the user clicks "Logout & Continue" in the modal
-    await supabase.rpc('handle_single_device_login', {
+    // FIX: Generate a fresh UUID here as well
+    const newSessionId = crypto.randomUUID();
+
+    const { error } = await supabase.rpc('handle_single_device_login', {
       target_user_id: userId,
-      new_session_id: token, 
+      new_session_id: newSessionId, 
       new_device_info: info
     });
+
+    if (error) {
+      console.error("RPC Error:", error.message);
+      toast.error("Database error: " + error.message);
+      return;
+    }
+
     navigate("/");
   } catch (err) {
-    toast.error("Failed to sync session. Please try again.");
+    toast.error("Failed to sync session.");
   }
 };
 

@@ -30,6 +30,19 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event,
 
     console.log("info",myInfo);
 
+    // --- ADD THIS BLOCK TO FIX YOUR ISSUE ---
+      const newSessionId = crypto.randomUUID();
+      const { error: rpcError } = await supabase.rpc('handle_single_device_login', {
+        target_user_id: session.user.id,
+        new_session_id: newSessionId,
+        new_device_info: myInfo
+      });
+
+      if (rpcError) {
+        console.error('Database update failed on session restore:', rpcError);
+      }
+    
+
     const channel = supabase
       .channel(`session_guard_${session.user.id}`)
       .on('postgres_changes', {

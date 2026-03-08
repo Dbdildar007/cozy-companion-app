@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { User, Settings, LogOut, ChevronRight, Heart, Clock, Star, Users, Copy, KeyRound, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { User, Settings, LogOut, ChevronRight, Heart, Clock, Star, Users, Copy, KeyRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -21,30 +21,22 @@ export default function ProfilePage() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  console.log("currentl - Profile in cache:", localStorage.getItem('user_profile'));
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetEmailError, setResetEmailError] = useState("");
 
-  // Change password state
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
-
-useEffect(() => {
+  useEffect(() => {
     if (!user) return;
-    
-    // Just fetch the display name for the UI, don't worry about device checks here
     supabase
       .from("profiles")
       .select("display_name, unique_id")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        if (data) {
-          setProfile(data);
-          localStorage.setItem('user_profile', JSON.stringify(data));
-        }
+        if (data) setProfile(data);
+        localStorage.setItem('user_profile', JSON.stringify(data));
       });
   }, [user]);
 
@@ -59,19 +51,12 @@ useEffect(() => {
     { icon: Settings, label: "Settings", count: null, action: () => navigate("/settings") },
   ];
 
-const handleSignOut = async () => {
-  // 1. Immediate UI feedback
-  toast.success("Signing out...");
-  navigate("/auth");
-
-  // 2. Perform cleanup in the background (no 'await' before navigate)
-  setProfile(null);
-  localStorage.removeItem('user_profile');
-  localStorage.removeItem('device_id');
-  
-  // 3. Fire and forget the server-side sign out
-  signOut().catch(err => console.error("Logout error:", err));
-};
+  const handleSignOut = async () => {
+    await signOut();
+    localStorage.removeItem('user_profile');
+    toast.success("Signed out");
+    navigate("/");
+  };
 
   const copyUniqueId = () => {
     if (profile?.unique_id) {
@@ -80,20 +65,33 @@ const handleSignOut = async () => {
     }
   };
 
-  const handleChangePassword = async () => {
-    setPasswordError("");
-    if (newPassword.length < 6) { setPasswordError("Password must be at least 6 characters."); return; }
-    if (newPassword !== confirmPassword) { setPasswordError("Passwords do not match."); return; }
-    setChangePasswordLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setChangePasswordLoading(false);
+  const validateEmail = (email: string): boolean => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email.trim());
+  };
+
+  const handleForgotPassword = async () => {
+    setResetEmailError("");
+    const trimmed = resetEmail.trim();
+    if (!trimmed) {
+      setResetEmailError("Please enter your email address.");
+      return;
+    }
+    if (!validateEmail(trimmed)) {
+      setResetEmailError("Please enter a valid email address.");
+      return;
+    }
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: window.location.origin,
+    });
+    setResetLoading(false);
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Password changed successfully!");
-      setShowChangePassword(false);
-      setNewPassword("");
-      setConfirmPassword("");
+      toast.success("Password reset link sent! Check your email.");
+      setShowForgotPassword(false);
+      setResetEmail("");
     }
   };
 
@@ -159,16 +157,16 @@ const handleSignOut = async () => {
         ))}
       </div>
 
-      {/* Change Password */}
+      {/* Forgot Password */}
       {user && (
         <div className="mb-6">
-          {!showChangePassword ? (
+          {!showForgotPassword ? (
             <button
-              onClick={() => setShowChangePassword(true)}
+              onClick={() => { setShowForgotPassword(true); setResetEmail(user.email || ""); }}
               className="w-full flex items-center gap-4 p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
             >
               <KeyRound className="w-5 h-5 text-primary" />
-              <span className="flex-1 text-left text-sm font-medium text-foreground">Change Password</span>
+              <span className="flex-1 text-left text-sm font-medium text-foreground">Reset Password</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           ) : (
@@ -179,42 +177,31 @@ const handleSignOut = async () => {
             >
               <div className="flex items-center gap-2 mb-1">
                 <KeyRound className="w-5 h-5 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Change Password</h3>
+                <h3 className="text-sm font-semibold text-foreground">Reset Password</h3>
               </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">We'll send a password reset link to your email.</p>
+              <div>
                 <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => { setNewPassword(e.target.value); setPasswordError(""); }}
-                  placeholder="New password (min 6 chars)"
-                  className="w-full bg-background text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-border"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => { setResetEmail(e.target.value); setResetEmailError(""); }}
+                  placeholder="Enter your email"
+                  className="w-full bg-background text-foreground placeholder:text-muted-foreground rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-border"
                 />
-                <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {showNewPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
-                </button>
+                {resetEmailError && (
+                  <p className="text-xs text-destructive mt-1">{resetEmailError}</p>
+                )}
               </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(""); }}
-                  placeholder="Confirm new password"
-                  className="w-full bg-background text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-border"
-                />
-              </div>
-              {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
               <div className="flex gap-2">
                 <button
-                  onClick={handleChangePassword}
-                  disabled={changePasswordLoading}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={handleForgotPassword}
+                  disabled={resetLoading}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50"
                 >
-                  {changePasswordLoading ? <><Loader2 className="w-4 h-4 animate-spin" />Updating...</> : "Update Password"}
+                  {resetLoading ? "Sending..." : "Send Reset Link"}
                 </button>
                 <button
-                  onClick={() => { setShowChangePassword(false); setPasswordError(""); setNewPassword(""); setConfirmPassword(""); }}
+                  onClick={() => { setShowForgotPassword(false); setResetEmailError(""); }}
                   className="px-4 py-2.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground text-sm transition-colors"
                 >
                   Cancel

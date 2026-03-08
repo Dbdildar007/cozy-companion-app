@@ -1,21 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock, User, Loader2, MailOpen, KeyRound } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, CheckCircle, MailOpen, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { getDeviceInfo } from "@/utils/deviceInfo";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -28,15 +16,7 @@ export default function AuthPage() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetEmailError, setResetEmailError] = useState("");
-
-  const [showConflict, setShowConflict] = useState(false);
-  const [existingDevice, setExistingDevice] = useState<any>(null);
-  const [pendingAuth, setPendingAuth] = useState<{ user: any; session: any } | null>(null);
-
+  // Auto-redirect when user verifies email and session appears
   useEffect(() => {
     if (user) {
       navigate("/", { replace: true });
@@ -48,84 +28,103 @@ export default function AuthPage() {
     setLoading(true);
 
     if (isLogin) {
-      const res = await signIn(email, password);
-
-      if (res.error) {
-        toast.error(res.error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (res.conflict) {
-        setExistingDevice(res.existingDevice);
-        setPendingAuth({ user: res.data.user, session: res.data.session });
-        setShowConflict(true);
-        setLoading(false);
+      const { error } = await signIn(email, password);
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          toast.error("Please verify your email first.");
+          setShowVerification(true);
+        } else {
+          toast.error(error.message);
+        }
       } else {
+        toast.success("Welcome back!");
         navigate("/");
       }
     } else {
-      const res = await signUp(email, password, displayName);
-      if (res.error) {
-        toast.error(res.error.message);
+      const { data, error } = await signUp(email, password, displayName);
+      if (error) {
+        toast.error(error.message);
+      } else if (data?.user && data.user.identities && data.user.identities.length === 0) {
+        // Supabase returns empty identities when email already exists
+        toast.error("This email is already registered. Please sign in instead.", { duration: 5000 });
+        setIsLogin(true);
       } else {
         setShowVerification(true);
       }
-      setLoading(false);
     }
+    setLoading(false);
   };
 
-  const finalizeLogin = async (userId: string, info: any) => {
-    try {
-      const newSessionId = crypto.randomUUID();
-      await (supabase.rpc as any)('handle_single_device_login', {
-        target_user_id: userId,
-        new_session_id: newSessionId,
-        new_device_info: info
-      });
-      setShowConflict(false);
-      navigate("/");
-    } catch (err) {
-      toast.error("Failed to sync session.");
-    }
-  };
-
-  const validateEmail = (em: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.trim());
-
-  const handleForgotPassword = async () => {
-    setResetEmailError("");
-    const trimmed = resetEmail.trim();
-    if (!trimmed) { setResetEmailError("Please enter your email address."); return; }
-    if (!validateEmail(trimmed)) { setResetEmailError("Please enter a valid email address."); return; }
-    setResetLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-      redirectTo: window.location.origin,
-    });
-    setResetLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Password reset link sent! Check your email.");
-      setShowForgotPassword(false);
-      setResetEmail("");
-    }
-  };
-
+  // Email verification screen
   if (showVerification) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-background flex items-center justify-center px-4 pt-16 pb-24">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen bg-background flex items-center justify-center px-4 pt-16 pb-24"
+      >
         <div className="w-full max-w-sm text-center">
-          <motion.div initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.1 }} className="mx-auto w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mb-6">
-            <motion.div animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}>
+          {/* Animated mail icon */}
+          <motion.div
+            initial={{ scale: 0, rotate: -30 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.1 }}
+            className="mx-auto w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mb-6"
+          >
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+            >
               <MailOpen className="w-10 h-10 text-primary" />
             </motion.div>
           </motion.div>
-          <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-2xl font-display tracking-wider text-foreground mb-3">CHECK YOUR EMAIL</motion.h2>
-          <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="text-sm text-muted-foreground mb-2 leading-relaxed">We've sent a verification link to</motion.p>
-          <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="text-sm font-semibold text-primary mb-6 break-all">{email}</motion.p>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-card border border-border rounded-xl p-4 mb-6 text-left space-y-3">
-            {[{ step: 1, text: "Open your email inbox" }, { step: 2, text: "Click the verification link" }, { step: 3, text: "You'll be redirected here automatically" }].map((item, i) => (
-              <motion.div key={item.step} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + i * 0.15 }} className="flex items-start gap-3">
+
+          <motion.h2
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-2xl font-display tracking-wider text-foreground mb-3"
+          >
+            CHECK YOUR EMAIL
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-sm text-muted-foreground mb-2 leading-relaxed"
+          >
+            We've sent a verification link to
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="text-sm font-semibold text-primary mb-6 break-all"
+          >
+            {email}
+          </motion.p>
+
+          {/* Animated steps */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-card border border-border rounded-xl p-4 mb-6 text-left space-y-3"
+          >
+            {[
+              { step: 1, text: "Open your email inbox" },
+              { step: 2, text: "Click the verification link" },
+              { step: 3, text: "You'll be redirected here automatically" },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + i * 0.15 }}
+                className="flex items-start gap-3"
+              >
                 <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-xs font-bold text-primary">{item.step}</span>
                 </div>
@@ -133,46 +132,33 @@ export default function AuthPage() {
               </motion.div>
             ))}
           </motion.div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="flex items-center justify-center gap-2 text-muted-foreground mb-6">
+
+          {/* Waiting indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="flex items-center justify-center gap-2 text-muted-foreground mb-6"
+          >
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-xs">Waiting for verification...</span>
           </motion.div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} className="space-y-3">
-            <button onClick={() => { setShowVerification(false); setIsLogin(true); }} className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground py-3 rounded-lg font-semibold text-sm transition-colors">Back to Sign In</button>
-            <p className="text-xs text-muted-foreground">Didn't receive it? Check your spam folder or try signing up again.</p>
-          </motion.div>
-        </div>
-      </motion.div>
-    );
-  }
 
-  if (showForgotPassword) {
-    return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-background flex items-center justify-center px-4 pt-16 pb-24">
-        <div className="w-full max-w-sm">
-          <div className="text-center mb-8">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", damping: 15 }} className="mx-auto w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mb-4">
-              <KeyRound className="w-8 h-8 text-primary" />
-            </motion.div>
-            <h1 className="text-2xl font-display tracking-wider text-foreground mb-2">RESET PASSWORD</h1>
-            <p className="text-muted-foreground text-sm">We'll send a password reset link to your email.</p>
-          </div>
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="bg-card rounded-xl p-6 border border-border space-y-4">
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input type="email" placeholder="Email address" value={resetEmail}
-                onChange={(e) => { setResetEmail(e.target.value); setResetEmailError(""); }}
-                className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-            </div>
-            {resetEmailError && <p className="text-xs text-destructive">{resetEmailError}</p>}
-            <button onClick={handleForgotPassword} disabled={resetLoading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-              {resetLoading ? <><Loader2 className="w-4 h-4 animate-spin" />Sending...</> : "Send Reset Link"}
-            </button>
-            <button onClick={() => { setShowForgotPassword(false); setResetEmailError(""); }}
-              className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground py-3 rounded-lg font-semibold text-sm transition-colors">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9 }}
+            className="space-y-3"
+          >
+            <button
+              onClick={() => { setShowVerification(false); setIsLogin(true); }}
+              className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground py-3 rounded-lg font-semibold text-sm transition-colors"
+            >
               Back to Sign In
             </button>
+            <p className="text-xs text-muted-foreground">
+              Didn't receive it? Check your spam folder or try signing up again.
+            </p>
           </motion.div>
         </div>
       </motion.div>
@@ -180,23 +166,57 @@ export default function AuthPage() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-background flex items-center justify-center px-4 pt-16 pb-24">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen bg-background flex items-center justify-center px-4 pt-16 pb-24"
+    >
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <motion.h1 initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", damping: 15 }} className="text-4xl font-display tracking-wider text-primary mb-2">CINESTREAM</motion.h1>
-          <motion.p initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="text-muted-foreground text-sm">
+          <motion.h1
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", damping: 15 }}
+            className="text-4xl font-display tracking-wider text-primary mb-2"
+          >
+            CINESTREAM
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="text-muted-foreground text-sm"
+          >
             {isLogin ? "Sign in to continue" : "Create your account"}
           </motion.p>
         </div>
 
-        <motion.form initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} onSubmit={handleSubmit} className="bg-card rounded-xl p-6 border border-border space-y-4">
+        <motion.form
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          onSubmit={handleSubmit}
+          className="bg-card rounded-xl p-6 border border-border space-y-4"
+        >
           <AnimatePresence mode="popLayout">
             {!isLogin && (
-              <motion.div key="name-field" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <motion.div
+                key="name-field"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="text" placeholder="Display Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required={!isLogin}
-                    className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  <input
+                    type="text"
+                    placeholder="Display Name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    required={!isLogin}
+                    className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
                 </div>
               </motion.div>
             )}
@@ -204,70 +224,65 @@ export default function AuthPage() {
 
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} required
-              className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
           </div>
 
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
-              className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
-              {showPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <Eye className="w-4 h-4 text-muted-foreground" />
+              )}
             </button>
           </div>
 
-          {isLogin && (
-            <div className="text-right">
-              <button type="button" onClick={() => { setShowForgotPassword(true); setResetEmail(email); }}
-                className="text-xs text-primary hover:underline font-medium">Forgot Password?</button>
-            </div>
-          )}
-
-          <button type="submit" disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-            {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Loading...</> : isLogin ? "Sign In" : "Create Account"}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </>
+            ) : isLogin ? "Sign In" : "Create Account"}
           </button>
 
           <p className="text-center text-sm text-muted-foreground">
             {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-primary hover:underline font-medium">
+            <button
+              type="button"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-primary hover:underline font-medium"
+            >
               {isLogin ? "Sign Up" : "Sign In"}
             </button>
           </p>
         </motion.form>
       </div>
-
-      <AlertDialog open={showConflict}>
-        <AlertDialogContent className="bg-card border-border text-foreground">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Device Limit Reached</AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground">
-              You are already logged in on a <span className="text-foreground font-semibold">{existingDevice?.deviceName}</span> ({existingDevice?.ip}).
-              Logging in here will log you out from the other device.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => setShowConflict(false)}
-              className="bg-transparent border-border hover:bg-secondary text-foreground"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (pendingAuth) {
-                  const info = await getDeviceInfo();
-                  await finalizeLogin(pendingAuth.user.id, info);
-                }
-              }}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              Logout & Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </motion.div>
   );
 }

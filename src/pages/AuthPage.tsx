@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
 import { getDeviceInfo } from "@/utils/deviceInfo";
 import {
   AlertDialog,
@@ -29,87 +28,67 @@ export default function AuthPage() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
-  // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetEmailError, setResetEmailError] = useState("");
 
-  const [showLimitModal, setShowLimitModal] = useState(false);
-  const [activeDevice, setActiveDevice] = useState<any>(null);
-
   const [showConflict, setShowConflict] = useState(false);
   const [existingDevice, setExistingDevice] = useState<any>(null);
-  const [pendingAuth, setPendingAuth] = useState<{user: any, session: any} | null>(null);
+  const [pendingAuth, setPendingAuth] = useState<{ user: any; session: any } | null>(null);
 
-// ... (existing code at line 29-33)
   useEffect(() => {
     if (user) {
       navigate("/", { replace: true });
     }
   }, [user, navigate]);
 
-  
-// --- Replace your current handleSubmit with this ---
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  if (isLogin) {
-    // 1. Call the hook's signIn (it now handles conflict detection)
-    const res = await signIn(email, password);
+    if (isLogin) {
+      const res = await signIn(email, password);
 
-    if (res.error) {
-      toast.error(res.error.message); // Use your toast for errors
-      setLoading(false);
-      return;
-    }
+      if (res.error) {
+        toast.error(res.error.message);
+        setLoading(false);
+        return;
+      }
 
-    // 2. Check the custom 'conflict' flag we added to useAuth
-    if (res.conflict) {
-      setExistingDevice(res.existingDevice);
-      setPendingAuth({ user: res.data.user, session: res.data.session });
-      setShowConflict(true);
-      setLoading(false);
+      if (res.conflict) {
+        setExistingDevice(res.existingDevice);
+        setPendingAuth({ user: res.data.user, session: res.data.session });
+        setShowConflict(true);
+        setLoading(false);
+      } else {
+        navigate("/");
+      }
     } else {
-      // 3. If no conflict, useAuth already handled the RPC call
+      const res = await signUp(email, password, displayName);
+      if (res.error) {
+        toast.error(res.error.message);
+      } else {
+        setShowVerification(true);
+      }
+      setLoading(false);
+    }
+  };
+
+  const finalizeLogin = async (userId: string, info: any) => {
+    try {
+      const newSessionId = crypto.randomUUID();
+      await (supabase.rpc as any)('handle_single_device_login', {
+        target_user_id: userId,
+        new_session_id: newSessionId,
+        new_device_info: info
+      });
+      setShowConflict(false);
       navigate("/");
+    } catch (err) {
+      toast.error("Failed to sync session.");
     }
-  } else {
-    // Handle Sign Up
-    const res = await signUp(email, password, displayName);
-    if (res.error) {
-      toast.error(res.error.message);
-    } else {
-      setShowVerification(true);
-    }
-    setLoading(false);
-  }
-};
-
-const finalizeLogin = async (userId: string, info: any) => {
-  try {
-    // FIX: Generate a fresh UUID here as well
-    const newSessionId = crypto.randomUUID();
-
-    const { error } = await supabase.rpc('handle_single_device_login', {
-      target_user_id: userId,
-      new_session_id: newSessionId, 
-      new_device_info: info
-    });
-
-    if (error) {
-      console.error("RPC Error:", error.message);
-      toast.error("Database error: " + error.message);
-      return;
-    }
-
-    navigate("/");
-  } catch (err) {
-    toast.error("Failed to sync session.");
-  }
-};
-
+  };
 
   const validateEmail = (em: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.trim());
 
@@ -132,7 +111,6 @@ const finalizeLogin = async (userId: string, info: any) => {
     }
   };
 
-  // Email verification screen
   if (showVerification) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-background flex items-center justify-center px-4 pt-16 pb-24">
@@ -168,7 +146,6 @@ const finalizeLogin = async (userId: string, info: any) => {
     );
   }
 
-  // Forgot password screen
   if (showForgotPassword) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-background flex items-center justify-center px-4 pt-16 pb-24">
@@ -183,11 +160,9 @@ const finalizeLogin = async (userId: string, info: any) => {
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="bg-card rounded-xl p-6 border border-border space-y-4">
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="email" placeholder="Email address" value={resetEmail}
+              <input type="email" placeholder="Email address" value={resetEmail}
                 onChange={(e) => { setResetEmail(e.target.value); setResetEmailError(""); }}
-                className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+                className="w-full bg-secondary text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
             </div>
             {resetEmailError && <p className="text-xs text-destructive">{resetEmailError}</p>}
             <button onClick={handleForgotPassword} disabled={resetLoading}
@@ -263,37 +238,36 @@ const finalizeLogin = async (userId: string, info: any) => {
         </motion.form>
       </div>
 
-<AlertDialog open={showConflict}>
-  <AlertDialogContent className="bg-[#1a1d29] border-gray-800 text-white">
-    <AlertDialogHeader>
-      <AlertDialogTitle>Device Limit Reached</AlertDialogTitle>
-      <AlertDialogDescription className="text-gray-400">
-        You are already logged in on a <span className="text-white font-semibold">{existingDevice?.deviceName}</span> ({existingDevice?.ip}). 
-        Logging in here will log you out from the other device.
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel 
-        onClick={() => setShowConflict(false)}
-        className="bg-transparent border-gray-700 hover:bg-gray-800 text-white"
-      >
-        Cancel
-      </AlertDialogCancel>
-      <AlertDialogAction 
-        onClick={async () => {
-          const info = await getDeviceInfo();
-          if (pendingAuth) {
-            await finalizeLogin(pendingAuth.user.id, pendingAuth.session.access_token, info);
-          }
-        }}
-        className="bg-blue-600 hover:bg-blue-700 text-white"
-      >
-        Logout & Continue
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>      
-      
+      <AlertDialog open={showConflict}>
+        <AlertDialogContent className="bg-card border-border text-foreground">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Device Limit Reached</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              You are already logged in on a <span className="text-foreground font-semibold">{existingDevice?.deviceName}</span> ({existingDevice?.ip}).
+              Logging in here will log you out from the other device.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setShowConflict(false)}
+              className="bg-transparent border-border hover:bg-secondary text-foreground"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (pendingAuth) {
+                  const info = await getDeviceInfo();
+                  await finalizeLogin(pendingAuth.user.id, info);
+                }
+              }}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              Logout & Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }

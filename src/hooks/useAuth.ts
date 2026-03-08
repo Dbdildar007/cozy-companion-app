@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { getDeviceInfo } from "@/utils/deviceInfo";
@@ -6,72 +6,64 @@ import { getDeviceInfo } from "@/utils/deviceInfo";
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(!supabase.auth.getSession());
+  const [loading, setLoading] = useState(true);
+  const deviceSyncedRef = useRef(false);
 
-
-
-useEffect(() => {
-    // Get initial session
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
-    // ... inside your useEffect
-const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-  setSession(session);
-  setUser(session?.user ?? null);
-  setLoading(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
 
-  if (event === 'SIGNED_IN' && session?.user) {
-    const myInfo = await getDeviceInfo();
+      if (event === 'SIGNED_IN' && session?.user && !deviceSyncedRef.current) {
+        deviceSyncedRef.current = true;
+        const myInfo = await getDeviceInfo();
 
-    console.log("info",myInfo);
+        // Sync device info on sign in
+        await (supabase.rpc as any)('handle_single_device_login', {
+          target_user_id: session.user.id,
+          new_session_id: crypto.randomUUID(),
+          new_device_info: myInfo
+        });
 
-    // --- ADD THIS BLOCK TO FIX YOUR ISSUE ---
-      const newSessionId = crypto.randomUUID();
-      const { error: rpcError } = await supabase.rpc('handle_single_device_login', {
-        target_user_id: session.user.id,
-        new_session_id: newSessionId,
-        new_device_info: myInfo
-      });
+        // Watch for device changes (another device logging in)
+        const channel = supabase
+          .channel(`session_guard_${session.user.id}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `user_id=eq.${session.user.id}`
+          }, (payload: any) => {
+            const dbDeviceId = payload.new.device_info?.deviceId;
+            if (dbDeviceId && dbDeviceId !== myInfo.deviceId) {
+              supabase.auth.signOut();
+              alert("Logged out: You signed in on another device.");
+            }
+          })
+          .subscribe();
 
-      if (rpcError) {
-        console.error('Database update failed on session restore:', rpcError);
+        return () => {
+          supabase.removeChannel(channel);
+        };
       }
-    
 
-    const channel = supabase
-      .channel(`session_guard_${session.user.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'profiles',
-        filter: `user_id=eq.${session.user.id}`
-      }, (payload) => {
-        // --- ADD THE CODE HERE ---
-        const dbDeviceId = payload.new.device_info?.deviceId;
+      if (event === 'SIGNED_OUT') {
+        deviceSyncedRef.current = false;
+      }
+    });
 
-        // If the device ID in the DB is now different from this browser's local ID
-        if (dbDeviceId && dbDeviceId !== myInfo.deviceId) {
-          supabase.auth.signOut();
-          alert("Logged out: You signed in on another device.");
-        }
-        // -------------------------
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }
-});
     return () => {
       subscription.unsubscribe();
     };
   }, []);
+
   const signUp = async (email: string, password: string, displayName: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -85,51 +77,40 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event,
   };
 
   const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  
-  if (error || !data.user || !data.session) return { data, error };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  // 1. Fetch profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('active_session_id, device_info')
-    .eq('user_id', data.user.id)
-    .single();
+    if (error || !data.user || !data.session) return { data, error, conflict: false, existingDevice: null };
 
-  const myInfo = await getDeviceInfo();
+    // Fetch profile to check for existing device
+    const { data: profile } = await (supabase.from('profiles') as any)
+      .select('active_session_id, device_info')
+      .eq('user_id', data.user.id)
+      .single();
 
-  // 2. Check for conflict
-  if (profile?.active_session_id && profile.device_info?.deviceId !== myInfo.deviceId) {
-    return { data, error: null, conflict: true, existingDevice: profile.device_info };
-  }
+    const myInfo = await getDeviceInfo();
 
-  // 3. Generate UUID for the database
-  const newSessionId = crypto.randomUUID();
+    // Check for device conflict
+    if (profile?.active_session_id && profile.device_info?.deviceId && profile.device_info.deviceId !== myInfo.deviceId) {
+      return { data, error: null, conflict: true, existingDevice: profile.device_info };
+    }
 
-  // 4. Call RPC and WAIT for the result
-  const { error: rpcError } = await supabase.rpc('handle_single_device_login', {
-    target_user_id: data.user.id,
-    new_session_id: newSessionId,
-    new_device_info: myInfo
-  });
+    // No conflict - update device info
+    const newSessionId = crypto.randomUUID();
+    await (supabase.rpc as any)('handle_single_device_login', {
+      target_user_id: data.user.id,
+      new_session_id: newSessionId,
+      new_device_info: myInfo
+    });
 
-  if (rpcError) {
-    console.error("Database update failed:", rpcError.message);
-    // Return the error so the user knows the session couldn't be initialized
-    return { data, error: rpcError, conflict: false };
-  }
+    return { data, error: null, conflict: false, existingDevice: null };
+  };
 
-  return { data, error: null, conflict: false, sessionId: newSessionId };
-};
-
-  
- const signOut = async () => {
-  if (user) {
-    // Clear device_info so the slot is free
-    await supabase.from("profiles").update({ device_info: null }).eq("user_id", user.id);
-  }
-  await supabase.auth.signOut();
-};
+  const signOut = async () => {
+    if (user) {
+      await (supabase.from("profiles") as any).update({ device_info: null, active_session_id: null }).eq("user_id", user.id);
+    }
+    await supabase.auth.signOut();
+  };
 
   return { user, session, loading, signUp, signIn, signOut };
 }

@@ -392,14 +392,14 @@ export type Database = {
           last_watched: string
           media_type: string | null
           movie_id: string
-           season_number: number | null
+          season_number: number | null
           user_id: string
         }
         Insert: {
           current_time_sec?: number
           duration_sec?: number
           episode_id?: string | null
-           episode_number?: number | null
+          episode_number?: number | null
           id?: string
           last_watched?: string
           media_type?: string | null

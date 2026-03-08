@@ -211,8 +211,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_session_id: string | null
           avatar_url: string | null
           created_at: string
+          device_info: Json | null
           display_name: string | null
           id: string
           is_online: boolean
@@ -222,8 +224,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_session_id?: string | null
           avatar_url?: string | null
           created_at?: string
+          device_info?: Json | null
           display_name?: string | null
           id?: string
           is_online?: boolean
@@ -233,8 +237,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_session_id?: string | null
           avatar_url?: string | null
           created_at?: string
+          device_info?: Json | null
           display_name?: string | null
           id?: string
           is_online?: boolean
@@ -392,14 +398,14 @@ export type Database = {
           last_watched: string
           media_type: string | null
           movie_id: string
-           season_number: number | null
+          season_number: number | null
           user_id: string
         }
         Insert: {
           current_time_sec?: number
           duration_sec?: number
           episode_id?: string | null
-           episode_number?: number | null
+          episode_number?: number | null
           id?: string
           last_watched?: string
           media_type?: string | null
@@ -447,7 +453,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      handle_single_device_login: {
+        Args: {
+          new_device_info: Json
+          new_session_id: string
+          target_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

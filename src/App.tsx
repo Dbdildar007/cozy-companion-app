@@ -1,84 +1,184 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
-import TopNav from "./components/TopNav";
-import BottomNav from "./components/BottomNav";
-import FloatingVideoCall from "./components/FloatingVideoCall";
-import IncomingCallOverlay from "./components/IncomingCallOverlay";
-import { useVideoCall } from "./hooks/useVideoCall";
-import Index from "./pages/Index";
-import SearchPage from "./pages/SearchPage";
-import FoldersPage from "./pages/FoldersPage";
-import DownloadsPage from "./pages/DownloadsPage";
-import ProfilePage from "./pages/ProfilePage";
-import AuthPage from "./pages/AuthPage";
-import FriendsPage from "./pages/FriendsPage";
-import WatchlistPage from "./pages/WatchlistPage";
-import WatchHistoryPage from "./pages/WatchHistoryPage";
-import MyRatingsPage from "./pages/MyRatingsPage";
-import SettingsPage from "./pages/SettingsPage";
-import NotFound from "./pages/NotFound";
-import ScrollToTop from "./components/ScrollToTop";
+import { useState } from "react";
 
-const queryClient = new QueryClient();
+// Styles
+import { GLOBAL_CSS } from "./styles/theme";
 
-function AppContent() {
-  const { callState, startCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera, toggleMinimize } = useVideoCall();
+// Hooks
+import useBreakpoint    from "./hooks/useBreakpoint";
+import useToast         from "./hooks/useToast";
+import useCart          from "./hooks/useCart";
+import useWishlist      from "./hooks/useWishlist";
+import useProducts      from "./hooks/useProducts";
 
+// Layout components
+import DesktopHeader  from "./components/DesktopHeader";
+import MobileHeader   from "./components/MobileHeader";
+import MobileNav      from "./components/MobileNav";
+import Footer         from "./components/Footer";
+import CartDrawer     from "./components/CartDrawer";
+import Toast          from "./components/Toast";
+
+// Pages
+import HomePage          from "./pages/HomePage";
+import ShopPage          from "./pages/ShopPage";
+import SearchPage        from "./pages/SearchPage";
+import WishlistPage      from "./pages/WishlistPage";
+import ProfilePage       from "./pages/ProfilePage";
+import ProductDetailPage from "./pages/ProductDetailPage";
+
+export default function App() {
+  const { isMobile, isTablet, isDesktop } = useBreakpoint();
+
+  // ── Navigation state ──
+  const [activeTab,      setActiveTab]      = useState("home");
+  const [selectedProduct,setSelectedProduct]= useState(null);
+
+  // ── Filter / sort state ──
+  const [search,      setSearch]      = useState("");
+  const [catFilter,   setCatFilter]   = useState("All");
+  const [brandFilter, setBrandFilter] = useState("All");
+  const [maxPrice,    setMaxPrice]    = useState(5000);
+  const [sortBy,      setSortBy]      = useState("popular");
+
+  // ── UI state ──
+  const [showCart,   setShowCart]   = useState(false);
+  const [orderDone,  setOrderDone]  = useState(false);
+
+  // ── Hooks ──
+  const { toast, showToast }                                               = useToast();
+  const { cart, cartCount, cartTotal, deliveryFee, grandTotal, addToCart, removeFromCart, updateQty, clearCart } = useCart(showToast);
+  const { wishlist, toggleWishlist, isWishlisted }                        = useWishlist(showToast);
+  const filteredProducts = useProducts({ search, catFilter, brandFilter, maxPrice, sortBy });
+
+  // ── Shared handler: checkout ──
+  const handleCheckout = () => {
+    clearCart();
+    setShowCart(false);
+    setOrderDone(true);
+    setActiveTab("profile");
+    showToast("Order placed! 🎉");
+  };
+
+  // ── Common props passed to every page ──
+  const pageProps = {
+    isMobile, isTablet, isDesktop,
+    onAddToCart:   addToCart,
+    onToggleWish:  toggleWishlist,
+    isWishlisted,
+    onSelectProduct: (p) => setSelectedProduct(p),
+  };
+
+  // ── Render ──
   return (
-    <>
-      <TopNav />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/folders" element={<FoldersPage />} />
-        <Route path="/downloads" element={<DownloadsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/friends" element={<FriendsPage onStartCall={startCall} />} />
-        <Route path="/watchlist" element={<WatchlistPage />} />
-        <Route path="/watch-history" element={<WatchHistoryPage />} />
-        <Route path="/my-ratings" element={<MyRatingsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <BottomNav />
+    <div style={{ fontFamily: "'Palatino Linotype', Palatino, Georgia, serif", background: "#FFFAF8", minHeight: "100vh" }}>
+      <style>{GLOBAL_CSS}</style>
 
-      <AnimatePresence>
-        {callState.status === "incoming" && (
-          <IncomingCallOverlay
-            callerName={callState.remoteDisplayName}
-            onAccept={acceptCall}
-            onDecline={declineCall}
-          />
-        )}
-      </AnimatePresence>
+      {/* ── Headers ── */}
+      {isMobile ? (
+        <MobileHeader
+          setActiveTab={setActiveTab}
+          cartCount={cartCount}
+          onCartOpen={() => setShowCart(true)}
+        />
+      ) : (
+        <DesktopHeader
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          search={search}
+          setSearch={setSearch}
+          catFilter={catFilter}
+          setCatFilter={setCatFilter}
+          wishlistCount={wishlist.length}
+          cartCount={cartCount}
+          onCartOpen={() => setShowCart(true)}
+        />
+      )}
 
-      <FloatingVideoCall
-        callState={callState}
-        onToggleMute={toggleMute}
-        onToggleCamera={toggleCamera}
-        onToggleMinimize={toggleMinimize}
-        onEndCall={endCall}
+      {/* ── Product detail view (full page, overrides tab) ── */}
+      {selectedProduct ? (
+        <ProductDetailPage
+          product={selectedProduct}
+          {...pageProps}
+          onBack={() => setSelectedProduct(null)}
+        />
+      ) : (
+        <main>
+          {activeTab === "home" && (
+            <HomePage
+              {...pageProps}
+              setActiveTab={setActiveTab}
+              setCatFilter={setCatFilter}
+            />
+          )}
+
+          {activeTab === "shop" && (
+            <ShopPage
+              {...pageProps}
+              filteredProducts={filteredProducts}
+              catFilter={catFilter}   setCatFilter={setCatFilter}
+              brandFilter={brandFilter} setBrandFilter={setBrandFilter}
+              maxPrice={maxPrice}     setMaxPrice={setMaxPrice}
+              sortBy={sortBy}         setSortBy={setSortBy}
+            />
+          )}
+
+          {activeTab === "search" && (
+            <SearchPage
+              {...pageProps}
+              search={search}
+              setSearch={setSearch}
+              filteredProducts={filteredProducts}
+            />
+          )}
+
+          {activeTab === "wishlist" && (
+            <WishlistPage
+              {...pageProps}
+              wishlist={wishlist}
+              onNavigateShop={() => setActiveTab("shop")}
+            />
+          )}
+
+          {activeTab === "profile" && (
+            <ProfilePage
+              isMobile={isMobile}
+              wishlistCount={wishlist.length}
+              orderPlaced={orderDone}
+            />
+          )}
+        </main>
+      )}
+
+      {/* ── Footer (desktop only) ── */}
+      {!isMobile && !selectedProduct && <Footer />}
+
+      {/* ── Mobile bottom nav ── */}
+      {isMobile && (
+        <MobileNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          wishlistCount={wishlist.length}
+        />
+      )}
+
+      {/* ── Cart drawer ── */}
+      <CartDrawer
+        isOpen={showCart}
+        onClose={() => setShowCart(false)}
+        cart={cart}
+        cartCount={cartCount}
+        cartTotal={cartTotal}
+        deliveryFee={deliveryFee}
+        grandTotal={grandTotal}
+        updateQty={updateQty}
+        removeFromCart={removeFromCart}
+        onCheckout={handleCheckout}
+        isMobile={isMobile}
+        onNavigateShop={() => setActiveTab("shop")}
       />
-    </>
+
+      {/* ── Toast notification ── */}
+      <Toast msg={toast} />
+    </div>
   );
 }
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ScrollToTop />
-        <AppContent />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
-export default App;
